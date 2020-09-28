@@ -1,0 +1,139 @@
+﻿/* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
+for details on configuring this project to bundle and minify static web assets. */
+
+.btn {
+    background-color: steelblue; /* #64A0c8Blue background */
+    border: none; /* Remove borders */
+    color: white; /* White text */
+    padding: 6px 6px; /* Some padding */
+    font-size: 16px; /* Set a font size */
+    cursor: pointer; /* Mouse pointer on hover */
+}
+.btn-settings {
+    width: 100%;
+}
+button.config
+{
+    background-color: indianred;
+}
+/* Darker background on mouse-over */
+.btn:hover:enabled {
+    background-color: lightsteelblue;
+    color:black;
+}
+.btn-active {
+    color: red;
+}
+.btn-on {
+    color: red;
+}
+.btn-off {
+    color: LightGrey;
+}
+.btn-off:hover {
+    color: black;
+}
+
+#discs-table {
+    display: grid;
+    grid-gap: 4px;
+    cursor: pointer;
+}
+
+.disc {
+    width: 100%;
+    height: 100%;
+    background-color: lightgrey;
+    border: 1px solid black;
+    padding: 2px;
+    position: relative;
+}
+.disc div {
+    width: 100%;
+    border: 1px solid black;
+}
+.disc img {
+    width: 100%;
+    display: inline-block;
+}
+
+.disc:hover {
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.disc-header {
+    text-align: left;
+}
+.disc-type {
+    float: right;
+}
+
+.boxed {
+    display: inline-block;
+    border: 2px solid black;
+    background: lightgrey;
+    padding:4px;
+}
+.disc-display-size-slider {
+    width:80px;
+}
+
+.controls-table {
+    border: 2px solid black;
+    background: lightgrey;
+}
+
+.changer-name {
+    background: steelblue;
+    color: white;
+    text-align: right;
+    font-weight: bold;
+}
+
+.navbar-brand {
+    height: 4em;
+}
+
+.diag {
+    color: orange;
+}
+
+
+.popover a {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+    display: block;
+    overflow: hidden;
+}
+
+.popover table {
+    border: 1px solid black;
+    width: 100%;
+    background-color: gainsboro;
+}
+
+.popover tr {
+    cursor: pointer;
+}
+
+.popover tr:nth-child(even) {
+    background-color: silver;
+}
+
+.popover tr:hover {
+    border: 1px solid black;
+    color: white;
+    background-color: steelblue;
+}
+
+.popover a::after {
+    content: attr(href);
+}
+.data {
+    display: none;
+}
+.tracks {
+    width: 100%;
+}
+

@@ -1,0 +1,124 @@
+﻿/*  Copyright 2020 Hugo Lyppens
+
+    DiscChangerHub.cs is part of DiscChanger.NET.
+
+    DiscChanger.NET is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    DiscChanger.NET is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with DiscChanger.NET.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+using DiscChanger.Models;
+
+namespace DiscChanger.Hubs
+{
+    public class DiscChangerHub: Hub
+    {
+        public DiscChangerService discChangerService;
+        private readonly Microsoft.Extensions.Logging.ILogger<DiscChangerHub> _logger;
+
+        public DiscChangerHub(DiscChangerService discChangerService, ILogger<DiscChangerHub> logger)
+        {
+            _logger = logger;
+            this.discChangerService = discChangerService;
+        }
+
+        public async Task Control(string changerKey, string command)
+        {
+            try
+            {
+                discChangerService.Changer(changerKey).Control(command);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Exception from control " + changerKey + '/' + command + ": " + e);
+            }
+        }
+        public async Task DiscDirect(string changerKey, int? discNumber, int? titleAlbumNumber, int? chapterTrackNumber)
+        {
+            try
+            {
+                discChangerService.Changer(changerKey).DiscDirect(discNumber, titleAlbumNumber, chapterTrackNumber);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Exception from DiscDirect " + changerKey + '/' + Convert.ToString(discNumber) + '/' + Convert.ToString(titleAlbumNumber) + '/' + Convert.ToString(chapterTrackNumber) + ": "+e.Message);
+            }
+        }
+        public async Task Scan(string changerKey, string discSet)
+        {
+            try
+            {
+                discChangerService.Changer(changerKey).Scan(discSet);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Exception from Scan " + changerKey + '/' + discSet + ": " + e.Message);
+            }
+        }
+        public async Task CancelScan(string changerKey)
+        {
+            try
+            {
+                discChangerService.Changer(changerKey).CancelScan();
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Exception from Cancel Scan " + changerKey + ": " + e.Message);
+            }
+        }
+        public async Task DeleteDiscs(string changerKey, string discSet)
+        {
+            try
+            {
+                await discChangerService.Changer(changerKey).DeleteDiscs(discSet);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Exception from Delete " + changerKey + '/' + discSet + ": " + e.Message);
+            }
+        }
+        public void DeleteChanger(string changerKey)
+        {
+            try
+            {
+                discChangerService.Delete(changerKey);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Exception from Delete Changer " + changerKey + ": " + e.Message);
+            }
+        }
+        public void MoveChanger(string changerKey, int offset)
+        {
+            try
+            {
+                discChangerService.Move(changerKey, offset);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Exception from Delete Changer " + changerKey + ": " + e.Message);
+            }
+        }
+        //public async Task SendMessage(string user, string message)
+        //{
+        //    await Clients.All.SendAsync("ReceiveMessage", user, message);
+        //}
+        //public async Task SendStatus(string changer, int discNumber, int titleAlbumNumber, int chapterTrackNumber, string status, int modeDisc )
+        //{
+        //    await Clients.All.SendAsync("StatusData", changer, discNumber, titleAlbumNumber, chapterTrackNumber, status, modeDisc);
+        //}
+    }
+}

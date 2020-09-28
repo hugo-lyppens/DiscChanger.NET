@@ -1,0 +1,74 @@
+﻿@*
+    Copyright 2020 Hugo Lyppens
+
+    DiscChanger.cshtml is part of DiscChanger.NET.
+
+    DiscChanger.NET is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    DiscChanger.NET is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with DiscChanger.NET.  If not, see <https://www.gnu.org/licenses/>.
+*@
+@page
+@model DiscChangerModel
+@{
+    ViewData["Title"] = "DiscChanger " + Model.Name;
+    ViewData["Description"] = $"Specify a disc changer";
+    ViewData["Image"] = "";
+    var referrer = Request.Headers["Referer"];
+}
+
+<form method="post" id="changer" name="changer" aria-labelledby="legend">
+    <fieldset>
+        <legend id="legend">Disc Changer Details:</legend>
+        <label asp-for="Name">Name</label>
+        <input asp-for="Name" />
+        <label asp-for="Type">Type</label>
+        @Html.DropDownListFor(m => m.Type,
+                 new SelectList(DiscChangerService.ChangerTypes), Model.OnChangeSubmit)
+        @if (!String.IsNullOrEmpty(Model.Type))
+        {
+            @if (Model.ConnectionTypes != null)
+            {
+                <label asp-for="Connection">Connection Type</label>
+                @Html.DropDownListFor(m => m.Connection,
+                          new SelectList(Model.ConnectionTypes), Model.OnChangeSubmit)
+            }
+            @if (Model.Connection == DiscChangerService.CONNECTION_SERIAL_PORT)
+            {
+                <label asp-for="PortName">Port</label>
+                @Html.DropDownListFor(m => m.PortName,
+                                             new SelectList(Model.SerialPortNames))
+                <label asp-for="HardwareFlowControl">Hardware flow control</label>
+                <input asp-for="HardwareFlowControl" type="checkbox" />
+
+            }
+            else if (Model.Connection == "IP")
+            {
+                <label asp-for="IPAddress">IP Address</label>
+                <input asp-for="IPAddress" />
+            }
+            @if (Model.Type == DiscChangerService.BDP_CX7000ES)
+            {
+                <label asp-for="CommandMode">Command Mode</label>
+                @Html.DropDownListFor(m => m.CommandMode,
+                                           new SelectList(DiscChangerService.CommandModes))
+            }
+            <button type="submit" name="op" value="Test">Test</button>
+            <button type="submit" name="op" value="OK">OK</button>
+        }
+        <button type="submit" name="op" value="Cancel">Cancel</button>
+    </fieldset>
+    @if (Model.TestResult != null)
+    {
+        <h3>Test results:</h3>
+        <pre>@Model.TestResult</pre>
+    }
+</form>

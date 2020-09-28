@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UserSecretsId>3fbbcc3f-f0b2-4c5b-a9fa-d9f92803b4dd</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Pages\Backup\**" />
+    <Content Remove="Pages\Backup\**" />
+    <EmbeddedResource Remove="Pages\Backup\**" />
+    <None Remove="Pages\Backup\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Pages\Configuration.cshtml.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Pages\Configuration.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediaTypeMap.Core" Version="2.3.3" />
+    <PackageReference Include="MetaBrainz.MusicBrainz" Version="3.0.2" />
+    <PackageReference Include="MetaBrainz.MusicBrainz.CoverArt" Version="3.0.0" />
+    <PackageReference Include="MetaBrainz.MusicBrainz.DiscId" Version="2.0.1" />
+    <PackageReference Include="System.IO.Ports" Version="4.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\Discs\" />
+  </ItemGroup>
+
+</Project>

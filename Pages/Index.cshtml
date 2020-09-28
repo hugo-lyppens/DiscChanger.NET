@@ -1,0 +1,144 @@
+﻿@page
+@model IndexModel
+@inject DiscChangerService dcs
+@{
+    ViewData["Title"] = "DiscChanger.NET";
+    ViewData["Description"] = $"Disc Changers via ASP.NET Core";
+}
+<script src="~/lib/microsoft-signalr/signalr.min.js"></script>
+<script src="~/js/discchanger.js"></script>
+
+@{var discDisplaySize = Request.Cookies["DiscDisplaySize"] ?? "15"; }
+<nav class="navbar navbar-expand-md sticky-top navbar-light bg-secondary">
+    <img  class="navbar-brand" src="img/SonyDVP-CX777ES600.png" />
+    <div class="container">
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        @*<i id="edit" onclick="toggle_config(this)" class="fas fa-toggle-off fa-lg"></i>*@
+        <div class="boxed">
+            <div>
+            <button class="btn btn-settings"><i id="edit" title="Toggle access to settings" onclick="toggle_config(this)" class="fas fa-cogs fa-lg"></i></button>
+            </div><div>
+            <input type="range" title="Disc Display Size (@(discDisplaySize)rem)" min="10" max="50" id="disc_display_size" onchange="change_display_size(this)" class="disc-display-size-slider" value="@discDisplaySize" />
+            </div>
+        </div>
+        <div class="navbar-collapse collapse mb-lg-0 ml-3" id="navbarSupportedContent">
+            <ul class="nav navbar-nav">
+                <li class="nav-item">
+                    <table class="controls-table">
+                        @{
+                            int discChangerCount = dcs.DiscChangers.Count;
+                            for (int dci = 0; dci < discChangerCount; dci++)
+                            {
+                                Models.DiscChangerModel dc = dcs.DiscChangers[dci];
+                                Models.DiscChangerModel.ScanStatus scanStatus = dc.getScanStatus();
+                                bool scanInProgress = scanStatus != null;
+                                string controlsDisplay = scanInProgress ? "none" : "block";
+                                string scanControlsDisplay = scanInProgress ? "block" : "none";
+                                string scanStatusString = String.Empty;
+                                if (scanStatus?.DiscNumber != null)
+                                {
+                                    scanStatusString = "Scanning: " + scanStatus.Index.Value + "/" + scanStatus.Count.Value + ", Slot: " + scanStatus.DiscNumber.Value;
+                                }
+
+                                var name = dc.Name;
+                                var key = dc.Key;
+                            <tr class="disc-changer" data-key="@key">
+                                <td class="changer-name" id="name_@key">@name</td>
+                                <td>
+                                    <div id="controls_@key" style="display:@controlsDisplay;">
+                                        <button class="btn"><i id="power_@key" data-command="power" title="Toggle disc changer power" data-changer-key="@key" onclick="control(this)" class="fas fa-power-off fa-lg"></i></button>
+                                        <button class="btn"><i id="previous_@key" data-command="previous" title="Previous track" data-changer-key="@key" onclick="control(this)" class="fas fa-fast-backward fa-lg"></i></button>
+                                        <button class="btn"><i id="next_@key" data-command="next" title="Next track" data-changer-key="@key" onclick="control(this)" class="fas fa-fast-forward fa-lg"></i></button>
+                                        <button class="btn"><i id="rev_scan_@key" data-command="rev_scan" title="Reverse scan" data-changer-key="@key" onclick="control(this)" class="fas fa-backward fa-lg"></i></button>
+                                        <button class="btn"><i id="fwd_scan_@key" data-command="fwd_scan" title="Forward scan" data-changer-key="@key" onclick="control(this)" class="fas fa-forward fa-lg"></i></button>
+                                        <button class="btn"><i id="play_@key" data-command="play" title="Play" data-changer-key="@key" onclick="control(this)" class="far fa-play-circle fa-lg"></i></button>
+                                        <button class="btn"><i id="pause_@key" data-command="pause" title="Pause" data-changer-key="@key" onclick="control(this)" class="far fa-pause-circle fa-lg"></i></button>
+                                        <button class="btn"><i id="stop_@key" data-command="stop" title="Stop" data-changer-key="@key" onclick="control(this)" class="far fa-stop-circle fa-lg"></i></button>
+                                        <button class="btn"><i id="time_text_@key" data-command="time_text" title="Time/Text" data-changer-key="@key" onclick="control(this)" class="fas fa-remove-format fa-lg"></i></button>
+                                        <button class="btn"><i id="discs_@key" data-command="discs" title="Toggle all discs vs. one disc" data-changer-key="@key" onclick="control(this)" class="fas fa-compact-disc fa-lg"></i></button>
+                                        <button class="btn"><i id="scan_@key" data-changer-key="@key" onclick="scan(&quot;@key&quot;,&quot;@name&quot;)" title="Prompt to start scanning given set of discs" class="fas fa-coins fa-lg"></i></button>
+                                        <button class="btn"><i id="delete-discs_@key" data-changer-key="@key" title="Prompt for set of discs to delete" onclick="deleteDiscs(&quot;@key&quot;,&quot;@name&quot;)" class="fas fa-minus-circle fa-lg"></i></button>
+                                    </div>
+                                    <div id="scan-controls_@key" style="display:@scanControlsDisplay;">
+                                        <input readonly title="Disc Scan Status" id="scan-status_@key" size="24" value="@scanStatusString" />
+                                        <button id="cancel-scan_@key" data-changer-key="@key" onclick="cancelScan(this)">Cancel Disc Scan</button>
+                                    </div>
+                                </td>
+                                <td class="hide-on-config">
+                                    <fieldset>
+                                        <input type="number" title="Disc Number" name="disc_number_@key" min="1" max="400" id="disc_number_@key" data-changer-key="@key" onchange="clear_title_album_chapter_track(this)" />
+                                        <input type="number" title="Title/Album Number" name="title_album_number_@key" min="1" max="499" id="title_album_number_@key" />
+                                        <input type="number" title="Chapter/Track Number" name="chapter_track_number_@key" min="1" max="999" id="chapter_track_number_@key" />
+                                        <button id="disc_direct_@key" onclick="discDirect(&quot;@key&quot;)">Go</button>
+                                    </fieldset>
+                                </td>
+                                <td hidden class="config">
+                                    <a hidden asp-page="DiscChanger" asp-route-key="@dc.Key" title="Go to changer config page" class="config"><button class="btn config" type="button"><i id="edit_@key" class="fas fa-cog fa-lg"></i></button></a>
+                                    <button class="btn config" type="button" title="Delete disc changer" onclick="return deleteChanger(&quot;@key&quot;)"><i id="delete_@key" class="fas fa-trash-alt fa-lg"></i></button>
+                                    @if (dci > 0)
+                                                {
+                                            //asp-route-op="up"
+                                    <button class="btn config" type="button" title="Move changer up one position" onclick="moveChanger(&quot;@key&quot;,-1)"><i id="up_@key" class="fas fa-sort-up fa-lg"></i></button>
+                                        }
+                                    @if (dci < discChangerCount - 1)
+                                        {
+                                    <button class="btn config" type="button" title="Move changer down one position" onclick="moveChanger(&quot;@key&quot;,1)"><i id="down_@key" class="fas fa-sort-down fa-lg"></i></button>
+                                        }
+                                </td>
+                            </tr>
+
+                            }
+                        }
+                        <tr hidden class="config disc-changer">
+                            <td>
+                                <a asp-page="DiscChanger"><button class="btn config" type="button" title="Add a disc changer">Add</button></a>
+                            </td>
+                            <td>
+                            </td>
+                            <td>
+                            </td>
+                        </tr>
+                    </table>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<div class="discs" id="discs-table" style="grid-template-columns:repeat(auto-fill,minmax(@(discDisplaySize)rem,1fr))">
+@{
+    var artRelPath = dcs.discLookup.musicBrainzArtRelPath;
+    for (int dci = 0; dci < discChangerCount; dci++)
+    {
+        Models.DiscChangerModel dc = dcs.DiscChangers[dci];
+        var key = dc.Key;
+        var changerName = dc.Name;
+        Models.DiscChangerModel.Status status = dc.CurrentStatus();
+        <script>updateControls("@key", @(status.discNumber?.ToString() ?? "null"), @(status.titleAlbumNumber?.ToString() ?? "null"), @(status.chapterTrackNumber?.ToString() ?? "null"), "@status.statusString", "@status.modeDisc");</script>
+        var discs = dc.Discs;
+        if (discs != null) {
+            lock (discs) {
+                var l = discs.ToList();
+                l.Sort(Models.DiscChangerModel.NumberTextComparer);
+                foreach (var kvp in l)
+                {
+                    var d = kvp.Value;
+                    @Html.Raw(d.toHtml(artRelPath));
+                }
+            }
+        }
+    }
+}
+</div>
+@section scripts {
+    @if(dcs.DiscChangers.Count==0)
+    {
+        <script>
+            toggle_config(document.getElementById('edit'));
+        </script>
+    }
+    <script>
+        setup_popover($('.disc'));
+    </script>
+}
