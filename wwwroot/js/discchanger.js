@@ -30,12 +30,12 @@ function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, sta
     var suffix = '_' + changer;
     allPlayerControls.forEach(function (item, i) { document.getElementById(item+suffix).parentElement.disabled = isOff; });
     mainPlayerControls.forEach(function (item, i) {
-        if (item == status)
+        if (item == status && !isOff)
             document.getElementById(item + suffix).classList.add("btn-active");
         else
             document.getElementById(item + suffix).classList.remove("btn-active");
     });
-    if (modeDisc == "all")
+    if (modeDisc == "all" && !isOff)
         document.getElementById("discs" + suffix).classList.add("btn-active");
     else
         document.getElementById("discs" + suffix).classList.remove("btn-active");
