@@ -9,3 +9,4 @@ You can scan all or a subset of the discs in the changer to populate the display
 Future enhancements planned:
 - Support for CX7000ES via TCP/IP in addition to Serial.
 - Support for GD3 lookups
+- Support for Firewire changers such as XL1B.
