@@ -97,13 +97,16 @@ namespace DiscChanger.Pages
             switch (op)
             {
                 case "OK":
-                    if (!String.IsNullOrEmpty(Key))
+                    if (!String.IsNullOrEmpty(Type) && !String.IsNullOrEmpty(Name) && !String.IsNullOrEmpty(Connection))
                     {
-                        discChangerService.Update(Key, Name, Type, Connection, CommandMode, PortName, hfc);
-                    }
-                    else
-                    {
-                        discChangerService.Add(Name, Type, Connection, CommandMode, PortName, hfc);
+                        if (!String.IsNullOrEmpty(Key))
+                        {
+                            discChangerService.Update(Key, Name, Type, Connection, CommandMode, PortName, hfc);
+                        }
+                        else
+                        {
+                            discChangerService.Add(Name, Type, Connection, CommandMode, PortName, hfc);
+                        }
                     }
                     return RedirectToPage("Index");
                 case "Cancel":
