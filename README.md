@@ -8,7 +8,7 @@ I've tested it on a Raspberry Pi 4, which can control as many changers as it has
 
 And on Windows, it runs in IIS with the ASP.NET Core 3.1 runtime installed.
 
-You can scan all or a subset of the discs in the changer to populate the display. Also, when the changer loads a disc, it checks to see whether it is a known disc. If not, DiscChanger.NET will look it up and show it on the grid without reloading the page. By clicking on a music CD, you get a popover showing listing of tracks.
+You can scan all or a subset of the discs in the changer to populate the display. Also, when the changer loads a disc, it checks to see whether it is a known disc. If not, DiscChanger.NET will look it up and show it on the grid without reloading the page. By clicking on a music CD, you get a <a href="doc/DiscChanger.NET Popover audio tracks and links.png">popover</a> showing listing of tracks as well as web links known to MusicBrainz pertaining to the disc.
 
 Future enhancements planned:
 - Support for CX7000ES via TCP/IP in addition to Serial.
