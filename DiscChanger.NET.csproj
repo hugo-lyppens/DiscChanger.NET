@@ -7,9 +7,13 @@
 
   <ItemGroup>
     <Compile Remove="Pages\Backup\**" />
+    <Compile Remove="wwwroot\Discs\**" />
     <Content Remove="Pages\Backup\**" />
+    <Content Remove="wwwroot\Discs\**" />
     <EmbeddedResource Remove="Pages\Backup\**" />
+    <EmbeddedResource Remove="wwwroot\Discs\**" />
     <None Remove="Pages\Backup\**" />
+    <None Remove="wwwroot\Discs\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,10 +30,6 @@
     <PackageReference Include="MetaBrainz.MusicBrainz.CoverArt" Version="3.0.0" />
     <PackageReference Include="MetaBrainz.MusicBrainz.DiscId" Version="2.0.1" />
     <PackageReference Include="System.IO.Ports" Version="4.7.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="wwwroot\Discs\" />
   </ItemGroup>
 
 </Project>
