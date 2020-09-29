@@ -12,7 +12,7 @@ You can scan all or a subset of the discs in the changer to populate the display
 
 To get started, go <a href="https://dotnet.microsoft.com/download/dotnet-core/3.1">here</a> to obtain the correct ASP.NET Core runtime for your OS. For the Raspberry Pi 4 running Raspian, I had to download the ARM32 version even though its CPU is 64 bit. Download DiscChanger.NET from the <a href="https://github.com/hugo-lyppens/DiscChanger.NET/releases">release list</a>
 
-Then ensure you have serial ports working and null modem cables to connect to your disc changers. For PCs, I strongly recoomend using any unused serial port headers (enable in BIOS & connect via Slot Plate adapter from 9-pin Serial to 10-pin mobo Header) before adding USB serial ports. My Supermicro board has two DTK serial port headers, which I've used for my cx777es changers, and my cx7000es is connected via a PL2303 USB serial port.
+Then ensure you have serial ports working and null modem cables to connect to your disc changers. For PCs, I strongly recoomend using any unused motherboard serial port headers (enable in BIOS & connect via Slot Plate adapter from 9-pin Serial to 10-pin mobo Header) before adding USB serial ports. My Supermicro board has two DTK serial port headers, which I've used for my cx777es changers, and my cx7000es is connected via a PL2303 USB serial port.
 
 Then ensure your changers are set up for RS232 control on their settings. Install the software and run via the dotnet command line. Navigate to the webpage and click the Add button to add your disc changer. Press the Test button to ensure the connection works and the changer responds to commands. Before running a wholesale disc scan just scan a few discs to ensure it all works well.
 
