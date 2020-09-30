@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <Content Remove="Pages\Configuration.cshtml" />
+    <Content Remove="wwwroot\DiscChangers.json" />
   </ItemGroup>
 
   <ItemGroup>

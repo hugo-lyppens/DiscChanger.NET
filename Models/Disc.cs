@@ -23,7 +23,7 @@ using System.Collections.Concurrent;
 using System.Collections;
 using System.Text;
 using static System.Web.HttpUtility;
-
+using System.Web;
 
 namespace DiscChanger.Models
 {
@@ -283,7 +283,7 @@ namespace DiscChanger.Models
 
             if (afn != null && artRelPath != null)
             {
-                sb.Append("<img src = \""); sb.Append(artRelPath); sb.Append('/'); sb.Append(afn); sb.Append(@"""/>");
+                sb.Append("<img src = \""); sb.Append(artRelPath); sb.Append('/'); sb.Append(HttpUtility.UrlEncode(afn)); sb.Append(@"""/>");
             }
             sb.Append(@"<div class=""artist"">");
             string a = LookupData?.Artist;
