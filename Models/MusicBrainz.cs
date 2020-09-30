@@ -117,7 +117,7 @@ namespace DiscChanger.Models
                 return UInt64.MaxValue;
             return disc.Offsets.Zip(disc.Offsets.Skip(1), (c, n) => n - c).Concat(new int[1] { disc.Sectors - disc.Offsets.LastOrDefault() }).Zip(lengths).Aggregate(0UL,(s,v)=> { ulong d = (ulong)(v.First - v.Second); s += d * d; return s; });
         }
-        static readonly HashSet<char> blackList = new HashSet<char>(System.IO.Path.GetInvalidFileNameChars().Concat(new char[] { '_','.' }));
+        static readonly HashSet<char> blackList = new HashSet<char>(System.IO.Path.GetInvalidFileNameChars().Concat(new char[] { '_','.','+' })); //plus added to deal with IIS double escaping rule
 
         internal Data Get(Disc d)
         {
@@ -238,15 +238,7 @@ namespace DiscChanger.Models
                     discs[fileNameBase] = data;
                     lengths2Name[lengths] = fileNameBase;
                     return data;
-                    //var disc = DiscId.Disc.Put(1, total-1, cumulative.Take(frameCount).ToArray());
-                    //Console.Out.WriteLine();
-                    //Console.Out.WriteLine("DiscId         : {0}", disc.Id);
-                    //Console.Out.WriteLine("FreeDB ID      : {0}", disc.FreedbId);
-                    //Console.Out.WriteLine("MCN            : {0}", disc.Mcn);
-                    //Console.Out.WriteLine("First track no.: {0}", disc.FirstTrackNumber);
-                    //Console.Out.WriteLine("Last track no. : {0}", disc.LastTrackNumber);
-                    //Console.Out.WriteLine("Sectors        : {0}", disc.Sectors);
-                    //Console.Out.WriteLine("Submission URL : {0}", disc.SubmissionUrl);
+
                 }
                 return null;
             }
