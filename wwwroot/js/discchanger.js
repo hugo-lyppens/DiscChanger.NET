@@ -86,8 +86,8 @@ function updateDisc(newChanger, newSlot, discHtml) {
     var position = 'beforeend';
     if (typeof newChangerIndex !== 'undefined') {
         var discElements = document.getElementsByClassName('disc');
-        l = discElements.length;
-        for (i = 0; i < l; i++) {
+        i=0;
+        while( i < discElements.length ) {
             var discElement = discElements[i];
             var ds = discElement.dataset;
             var changerIndex = changerKey2Index[ds.changer];
@@ -95,14 +95,15 @@ function updateDisc(newChanger, newSlot, discHtml) {
             if (changerIndex == newChangerIndex) {
                 var slot = ds.slot;
                 if (slot > newSlot) { element = discElement; position = 'beforebegin'; break; }
-                if (slot == newSlot) { document.removeChild(discElement); }
+                if (slot == newSlot) { discElement.remove(); continue; }
             }
+            i++;
         }
     }
     element.insertAdjacentHTML(position, discHtml);
     var insertedElement = (position === 'beforeend') ? element.lastElementChild : element.previousElementSibling;
     setup_popover($(insertedElement));
-    element.scrollIntoView(false);
+    insertedElement.scrollIntoView(false);
 }
 
 function scanStatus(changer, slot, index, count)
@@ -159,10 +160,7 @@ function scan(key, name) {
         }
     });
 }
-function confirmDeleteChanger(key, name) {
-    var discsCount = document.getElementById('discs-table').querySelectorAll('[data-changer="' + key + '"]').length;
-    return confirm("Do you want to delete changer " + name + " containing " + discsCount + " discs?");
-}
+
 function deleteChanger(key, name) {
     var discsCount = document.getElementById('discs-table').querySelectorAll('[data-changer="' + key + '"]').length;
     if (confirm("Do you want to delete changer " + name + " containing " + discsCount + " discs?")) {
@@ -171,6 +169,7 @@ function deleteChanger(key, name) {
         });
     }
 }
+
 function moveChanger(key, offset) {
     connection.invoke("MoveChanger", key, offset).catch(function (err) {
         return console.error(err.toString());
