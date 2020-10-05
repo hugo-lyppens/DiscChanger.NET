@@ -25,6 +25,11 @@ button.config
     color:white;
     cursor:default;
 }
+
+.disc-changer input[type=number] {
+    width:3.5em;
+}
+
 .btn-active {
     color: red;
 }
