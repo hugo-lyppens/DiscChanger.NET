@@ -19,7 +19,11 @@ button.config
 /* Darker background on mouse-over */
 .btn:hover:enabled {
     background-color: lightsteelblue;
-    color:black;
+    color: black;
+}
+.btn[disabled]:hover {
+    color:white;
+    cursor:default;
 }
 .btn-active {
     color: red;

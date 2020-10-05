@@ -19,7 +19,7 @@
 
 var connection = new signalR.HubConnectionBuilder().withUrl("/discChangerHub").build();
 
-const mainPlayerControls = ["play", "pause", "stop"];
+const mainPlayerControls = ["open", "play", "pause", "stop"];
 const otherPlayerControls = ["previous", "next", "rev_scan", "fwd_scan", "time_text", "discs","scan","delete-discs",
     "disc_number", "title_album_number", "chapter_track_number", "disc_direct"];
 
@@ -28,7 +28,11 @@ const allPlayerControls = mainPlayerControls.concat(otherPlayerControls);
 function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc) {
     var isOff = status == "off";
     var suffix = '_' + changer;
-    allPlayerControls.forEach(function (item, i) { document.getElementById(item+suffix).parentElement.disabled = isOff; });
+    allPlayerControls.forEach(function (item, i) {
+        var controlElement = document.getElementById(item + suffix);
+        var b = isOff || controlElement.dataset.disabled;
+        controlElement.parentElement.disabled = b;
+    });
     mainPlayerControls.forEach(function (item, i) {
         if (item == status && !isOff)
             document.getElementById(item + suffix).classList.add("btn-active");
@@ -45,16 +49,6 @@ function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, sta
     document.getElementById("disc_number" + suffix).value = isOff ? null : slot;
     document.getElementById("title_album_number" + suffix).value = (isOff || titleAlbumNumber==0) ? null : titleAlbumNumber;
     document.getElementById("chapter_track_number" + suffix).value = (isOff || chapterTrackNumber==0) ? null : chapterTrackNumber;
-    //switch (status) {
-    //    case "off":
-    //        break;
-    //    case "stop":
-    //    case "play":
-    //    case "pause":
-    //        document.getElementById(status + suffix).style.color = "Red";
-    //        break;
-    //    default:
-    //}
 }
 function setup_popover(jq) {
     jq.popover({
@@ -140,9 +134,11 @@ connection.start().then(function () {
 
 function control(element) {
     var ds = element.dataset;
-    connection.invoke("Control", ds.changerKey, ds.command).catch(function (err) {
-        return console.error(err.toString());
-    });
+    if (ds.command&&!ds.disabled) {
+        connection.invoke("Control", ds.changerKey, ds.command).catch(function (err) {
+            return console.error(err.toString());
+        });
+    }
 }
 
 function scan(key, name) {

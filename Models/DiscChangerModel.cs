@@ -287,7 +287,10 @@ namespace DiscChanger.Models
             }
             return sb.ToString();
         }
-
+        public bool SupportsCommand(string command)
+        {
+            return this.Type==DiscChangerService.BDP_CX7000ES||command!="open";
+        }
         internal async Task<string> Test()
         {
             StringBuilder sb = new StringBuilder();        
@@ -579,7 +582,8 @@ namespace DiscChanger.Models
             { "time_text", (byte)0x1d},
             { "discs", (byte)0x1e},
             { "rev_scan", (byte)0x20},
-            { "fwd_scan", (byte)0x21}
+            { "fwd_scan", (byte)0x21},
+            { "open", (byte)0x39}
         };
 
         //0x00	Numeric Key 0

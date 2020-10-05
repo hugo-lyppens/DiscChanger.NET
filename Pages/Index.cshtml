@@ -15,7 +15,7 @@
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        @*<i id="edit" onclick="toggle_config(this)" class="fas fa-toggle-off fa-lg"></i>*@
+        
         <div class="boxed">
             <div>
             <button class="btn btn-settings"><i id="edit" title="Toggle access to settings" onclick="toggle_config(this)" class="fas fa-cogs fa-lg"></i></button>
@@ -44,11 +44,13 @@
 
                                 var name = dc.Name;
                                 var key = dc.Key;
+                                var changerType = dc.Type;
                             <tr class="disc-changer" data-key="@key">
                                 <td class="changer-name" id="name_@key">@name</td>
                                 <td>
                                     <div id="controls_@key" style="display:@controlsDisplay;">
                                         <button class="btn"><i id="power_@key" data-command="power" title="Toggle disc changer power" data-changer-key="@key" onclick="control(this)" class="fas fa-power-off fa-lg"></i></button>
+                                        <button class="btn"><i id="open_@key" data-command="open" @Html.Raw(dc.SupportsCommand("open")?"title=\"Open/Close door\"":"title=\"Unsupported on "+changerType+": Open/Close door\" data-disabled=\"true\"") data-changer-key="@key" onclick="control(this)" class="fas fa-door-open fa-lg"></i></button>
                                         <button class="btn"><i id="previous_@key" data-command="previous" title="Previous track" data-changer-key="@key" onclick="control(this)" class="fas fa-fast-backward fa-lg"></i></button>
                                         <button class="btn"><i id="next_@key" data-command="next" title="Next track" data-changer-key="@key" onclick="control(this)" class="fas fa-fast-forward fa-lg"></i></button>
                                         <button class="btn"><i id="rev_scan_@key" data-command="rev_scan" title="Reverse scan" data-changer-key="@key" onclick="control(this)" class="fas fa-backward fa-lg"></i></button>
