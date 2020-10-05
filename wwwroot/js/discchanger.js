@@ -22,7 +22,6 @@ var connection = new signalR.HubConnectionBuilder().withUrl("/discChangerHub").b
 const mainPlayerControls = ["open", "play", "pause", "stop"];
 const otherPlayerControls = ["previous", "next", "rev_scan", "fwd_scan", "time_text", "discs","scan","delete-discs",
     "disc_number", "title_album_number", "chapter_track_number", "disc_direct"];
-
 const allPlayerControls = mainPlayerControls.concat(otherPlayerControls);
 
 function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc) {
@@ -50,6 +49,7 @@ function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, sta
     document.getElementById("title_album_number" + suffix).value = (isOff || titleAlbumNumber==0) ? null : titleAlbumNumber;
     document.getElementById("chapter_track_number" + suffix).value = (isOff || chapterTrackNumber==0) ? null : chapterTrackNumber;
 }
+
 function setup_popover(jq) {
     jq.popover({
         content: function () {
@@ -115,6 +115,7 @@ function scanInProgress(changer, flag)
     document.getElementById("chapter_track_number_" + changer).style.readonly = flag;
     document.getElementById("disc_direct_" + changer).style.display = flag ? 'none' : 'inline-block';
 }
+
 function reload() {
     window.location.reload(true);
 }
@@ -124,10 +125,7 @@ connection.on("DiscData", updateDisc);
 connection.on("ScanStatus", scanStatus);
 connection.on("ScanInProgress", scanInProgress);
 connection.on("Reload", reload);
-
-
 connection.start().then(function () {
-//    document.getElementById("sendButton").disabled = false;
 }).catch(function (err) {
     return console.error(err.toString());
 });
@@ -171,6 +169,7 @@ function moveChanger(key, offset) {
         return console.error(err.toString());
     });
 }
+
 function deleteDiscs(key, name) {
     $.ajax({
         url: '/?handler=DiscsToDelete',
@@ -205,6 +204,7 @@ function discDirect(key) {
         return console.error(err.toString());
     });
 }
+
 function dt(key, slot, chapterTrackNumber) {
     var suffix = '_' + key;
     var b = document.getElementById("power" + suffix).classList.contains('btn-on');
@@ -214,12 +214,11 @@ function dt(key, slot, chapterTrackNumber) {
 }
 
 function toggle_config(element) {
-    //var off = element.classList.toggle('fa-toggle-off');
-    //var on = element.classList.toggle('fa-toggle-on');
     var on = element.classList.toggle('btn-on');
     document.querySelectorAll('.config').forEach(function (e) { e.hidden = !on; });
     document.querySelectorAll('.hide-on-config').forEach(function (e) { e.hidden = on; });
 }
+
 function change_display_size(element) {
     var sz = element.value;
     var szrem = sz + 'rem';
@@ -227,9 +226,9 @@ function change_display_size(element) {
     element.title = "Disc Display Size (" + szrem + ")";
     document.cookie = 'DiscDisplaySize=' + sz + ';max-age=2000000000';
 }
+
 function clear_title_album_chapter_track(element) {
     var changerKey = element.dataset.changerKey;
     document.getElementById("title_album_number_" + changerKey).value = null;
     document.getElementById("chapter_track_number_" + changerKey).value = null;
 }
-
