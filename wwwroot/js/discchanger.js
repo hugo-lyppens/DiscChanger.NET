@@ -28,9 +28,9 @@ function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, sta
     var isOff = status == "off";
     var suffix = '_' + changer;
     allPlayerControls.forEach(function (item, i) {
-        var controlElement = document.getElementById(item + suffix);
-        var b = isOff || controlElement.dataset.disabled;
-        controlElement.parentElement.disabled = b;
+        var buttonElement = document.getElementById(item + suffix).parentElement;
+        var b = isOff || buttonElement.dataset.disabled;
+        buttonElement.disabled = b;
     });
     mainPlayerControls.forEach(function (item, i) {
         if (item == status && !isOff)
@@ -130,10 +130,9 @@ connection.start().then(function () {
     return console.error(err.toString());
 });
 
-function control(element) {
-    var ds = element.dataset;
-    if (ds.command&&!ds.disabled) {
-        connection.invoke("Control", ds.changerKey, ds.command).catch(function (err) {
+function control(changerKey,command) {
+    if (command) {
+        connection.invoke("Control", changerKey, command).catch(function (err) {
             return console.error(err.toString());
         });
     }
@@ -186,9 +185,8 @@ function deleteDiscs(key, name) {
     });
 }
 
-function cancelScan(element) {
-    var key = element.dataset.changerKey;
-    connection.invoke("CancelScan", key).catch(function (err) {
+function cancelScan(changerKey) {
+    connection.invoke("CancelScan", changerKey).catch(function (err) {
         return console.error(err.toString());
     });
 }
@@ -227,8 +225,7 @@ function change_display_size(element) {
     document.cookie = 'DiscDisplaySize=' + sz + ';max-age=2000000000';
 }
 
-function clear_title_album_chapter_track(element) {
-    var changerKey = element.dataset.changerKey;
+function clear_title_album_chapter_track(changerKey) {
     document.getElementById("title_album_number_" + changerKey).value = null;
     document.getElementById("chapter_track_number_" + changerKey).value = null;
 }

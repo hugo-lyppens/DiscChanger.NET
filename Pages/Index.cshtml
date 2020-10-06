@@ -49,31 +49,31 @@
                                 <td class="changer-name" id="name_@key">@name</td>
                                 <td>
                                     <div id="controls_@key" style="display:@controlsDisplay;">
-                                        <button class="btn"><i id="power_@key" data-command="power" title="Toggle disc changer power" data-changer-key="@key" onclick="control(this)" class="fas fa-power-off fa-lg"></i></button>
-                                        <button class="btn"><i id="open_@key" data-command="open" @Html.Raw(dc.SupportsCommand("open")?"title=\"Open/Close door\"":"title=\"Unsupported on "+changerType+": Open/Close door\" data-disabled=\"true\"") data-changer-key="@key" onclick="control(this)" class="fas fa-door-open fa-lg"></i></button>
-                                        <button class="btn"><i id="previous_@key" data-command="previous" title="Previous track" data-changer-key="@key" onclick="control(this)" class="fas fa-fast-backward fa-lg"></i></button>
-                                        <button class="btn"><i id="next_@key" data-command="next" title="Next track" data-changer-key="@key" onclick="control(this)" class="fas fa-fast-forward fa-lg"></i></button>
-                                        <button class="btn"><i id="rev_scan_@key" data-command="rev_scan" title="Reverse scan" data-changer-key="@key" onclick="control(this)" class="fas fa-backward fa-lg"></i></button>
-                                        <button class="btn"><i id="fwd_scan_@key" data-command="fwd_scan" title="Forward scan" data-changer-key="@key" onclick="control(this)" class="fas fa-forward fa-lg"></i></button>
-                                        <button class="btn"><i id="play_@key" data-command="play" title="Play" data-changer-key="@key" onclick="control(this)" class="far fa-play-circle fa-lg"></i></button>
-                                        <button class="btn"><i id="pause_@key" data-command="pause" title="Pause" data-changer-key="@key" onclick="control(this)" class="far fa-pause-circle fa-lg"></i></button>
-                                        <button class="btn"><i id="stop_@key" data-command="stop" title="Stop" data-changer-key="@key" onclick="control(this)" class="far fa-stop-circle fa-lg"></i></button>
-                                        <button class="btn"><i id="time_text_@key" data-command="time_text" title="Time/Text" data-changer-key="@key" onclick="control(this)" class="fas fa-remove-format fa-lg"></i></button>
-                                        <button class="btn"><i id="discs_@key" data-command="discs" title="Toggle all discs vs. one disc" data-changer-key="@key" onclick="control(this)" class="fas fa-compact-disc fa-lg"></i></button>
-                                        <button class="btn"><i id="scan_@key" data-changer-key="@key" onclick="scan(&quot;@key&quot;,&quot;@name&quot;)" title="Prompt to start scanning given set of discs" class="fas fa-coins fa-lg"></i></button>
-                                        <button class="btn"><i id="delete-discs_@key" data-changer-key="@key" title="Prompt for set of discs to delete" onclick="deleteDiscs(&quot;@key&quot;,&quot;@name&quot;)" class="fas fa-minus-circle fa-lg"></i></button>
+                                        <button class="btn" title="Toggle disc changer power" onclick="control('@key','power')"><i id="power_@key" class="fas fa-power-off fa-lg"></i></button>
+                                        <button class="btn" @Html.Raw(dc.SupportsCommand("open") ? "title=\"Open/Close door\"" : "title=\"Unsupported on " + changerType + ": Open/Close door\" data-disabled=\"true\"") onclick="control('@key','open')"><i id="open_@key" class="fas fa-door-open fa-lg"></i></button>
+                                        <button class="btn" title="Previous track" onclick="control('@key','previous')"><i id="previous_@key" class="fas fa-fast-backward fa-lg"></i></button>
+                                        <button class="btn" title="Next track" onclick="control('@key','next')"><i id="next_@key" class="fas fa-fast-forward fa-lg"></i></button>
+                                        <button class="btn" title="Reverse scan" onclick="control('@key','rev_scan')"><i id="rev_scan_@key" class="fas fa-backward fa-lg"></i></button>
+                                        <button class="btn" title="Forward scan" onclick="control('@key','fwd_scan')"><i id="fwd_scan_@key" class="fas fa-forward fa-lg"></i></button>
+                                        <button class="btn" title="Play" onclick="control('@key','play')"><i id="play_@key" class="far fa-play-circle fa-lg"></i></button>
+                                        <button class="btn" title="Pause" onclick="control('@key','pause')"><i id="pause_@key" class="far fa-pause-circle fa-lg"></i></button>
+                                        <button class="btn" title="Stop" onclick="control('@key','stop')"><i id="stop_@key" class="far fa-stop-circle fa-lg"></i></button>
+                                        <button class="btn" title="Time/Text" onclick="control('@key','time_text')"><i id="time_text_@key" class="fas fa-remove-format fa-lg"></i></button>
+                                        <button class="btn" title="Toggle all discs vs. one disc" onclick="control('@key','discs')"><i id="discs_@key" class="fas fa-compact-disc fa-lg"></i></button>
+                                        <button class="btn" title="Prompt to start scanning given set of discs" onclick="scan('@key',&quot;@name&quot;)"><i id="scan_@key" class="fas fa-coins fa-lg"></i></button>
+                                        <button class="btn" title="Prompt for set of discs to delete" onclick="deleteDiscs('@key',&quot;@name&quot;)"><i id="delete-discs_@key" class="fas fa-minus-circle fa-lg"></i></button>
                                     </div>
                                     <div id="scan-controls_@key" style="display:@scanControlsDisplay;">
                                         <input readonly title="Disc Scan Status" id="scan-status_@key" size="24" value="@scanStatusString" />
-                                        <button id="cancel-scan_@key" data-changer-key="@key" onclick="cancelScan(this)">Cancel Disc Scan</button>
+                                        <button id="cancel-scan_@key" onclick="cancelScan('@key')">Cancel Disc Scan</button>
                                     </div>
                                 </td>
                                 <td class="hide-on-config">
                                     <fieldset>
-                                        <input type="number" title="Disc Number" name="disc_number_@key" min="1" max="400" id="disc_number_@key" data-changer-key="@key" onchange="clear_title_album_chapter_track(this)" />
+                                        <input type="number" title="Disc Number" name="disc_number_@key" min="1" max="400" id="disc_number_@key" onchange="clear_title_album_chapter_track('@key')" />
                                         <input type="number" title="Title/Album Number" name="title_album_number_@key" min="1" max="499" id="title_album_number_@key" />
                                         <input type="number" title="Chapter/Track Number" name="chapter_track_number_@key" min="1" max="999" id="chapter_track_number_@key" />
-                                        <button id="disc_direct_@key" onclick="discDirect(&quot;@key&quot;)">Go</button>
+                                        <button id="disc_direct_@key" onclick="discDirect('@key')">Go</button>
                                     </fieldset>
                                 </td>
                                 <td hidden class="config">
