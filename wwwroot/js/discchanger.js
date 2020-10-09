@@ -211,8 +211,8 @@ function dt(key, slot, chapterTrackNumber) {
     document.getElementById("chapter_track_number" + suffix).value = (b && chapterTrackNumber ) ? chapterTrackNumber:null;
 }
 
-function toggle_config(element) {
-    var on = element.classList.toggle('btn-on');
+function toggle_config() {
+    var on = document.getElementById("edit").classList.toggle('btn-on');
     document.querySelectorAll('.config').forEach(function (e) { e.hidden = !on; });
     document.querySelectorAll('.hide-on-config').forEach(function (e) { e.hidden = on; });
 }
