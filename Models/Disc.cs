@@ -57,16 +57,16 @@ namespace DiscChanger.Models
         };
 
 
-        static public readonly Dictionary<ushort, string> languageCode2String = new Dictionary<ushort, string> {
-            { (ushort)0x0000, "DiscMemo" },
-            { (ushort)0x1144, "English" }
-        };
+        //static public readonly Dictionary<ushort, string> languageCode2String = new Dictionary<ushort, string> {
+        //    { (ushort)0x0000, "DiscMemo" },
+        //    { (ushort)0x1144, "English" }
+        //};
 
-        static public readonly Dictionary<byte, string> characterCodeSet2String = new Dictionary<byte, string> {
-            { (byte)0x00, "ISO-646(ASCII)" },
-            { (byte)0x01, "ISO-8859" },
-            { (byte)0x10, "Disc Memo(ASCII)" }
-        };
+        //static public readonly Dictionary<byte, string> characterCodeSet2String = new Dictionary<byte, string> {
+        //    { (byte)0x00, "ISO-646(ASCII)" },
+        //    { (byte)0x01, "ISO-8859" },
+        //    { (byte)0x10, "Disc Memo(ASCII)" }
+        //};
         public MusicBrainz.Data LookupData;
         public string Slot { get; set; }
         public DiscChangerModel DiscChanger;
@@ -125,13 +125,132 @@ namespace DiscChanger.Models
                 return !(lhs == rhs);
             }
         };
+        public class TOC : IEquatable<TOC>
+        {
+
+            public string[] Titles { get; set; }
+            public ConcurrentDictionary<string, int[]> TitleFrames { get; set; }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as TOC);
+            }
+
+            public bool Equals(TOC other)
+            {
+                return other != null &&
+                       StructuralComparisons.StructuralEqualityComparer.Equals(Titles, other.Titles) &&
+                       Titles.All(t=>StructuralComparisons.StructuralEqualityComparer.Equals(TitleFrames[t], other.TitleFrames[t]));
+            }
+            public override int GetHashCode()
+            {
+                HashCode hash=new HashCode();
+                hash.Add(StructuralComparisons.StructuralEqualityComparer.GetHashCode(Titles));
+                foreach(var t in Titles)
+                    hash.Add(StructuralComparisons.StructuralEqualityComparer.GetHashCode(TitleFrames[t]));
+                return hash.ToHashCode();
+            }
+
+            public static bool operator ==(TOC lhs, TOC rhs)
+            {
+                // Check for null on left side.
+                if (Object.ReferenceEquals(lhs, null))
+                {
+                    if (Object.ReferenceEquals(rhs, null))
+                    {
+                        // null == null = true.
+                        return true;
+                    }
+
+                    // Only the left side is null.
+                    return false;
+                }
+                // Equals handles case of null on right side.
+                return lhs.Equals(rhs);
+            }
+
+            public static bool operator !=(TOC lhs, TOC rhs)
+            {
+                return !(lhs == rhs);
+            }
+        }
+        public TOC TableOfContents { get; set; }
+        public Data DiscData { get; set; }
+        public virtual void Clear() { TableOfContents = null; DiscData = null; }
+        public virtual bool HasAll() { return DiscData != null && TableOfContents != null; }
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Disc);
+        }
+        public bool Equals(Disc other)
+        {
+            return other != null && this.DiscData == other.DiscData && this.TableOfContents == other.TableOfContents;
+        }
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(DiscData, TableOfContents);
+        }
+        public int[] StandardizedCDTableOfContents()
+        {
+            if (TableOfContents?.TitleFrames != null && TableOfContents.TitleFrames.TryGetValue("CD", out int[] lengths))
+            {
+                if (!this.DiscChanger.AdjustLastTrackLength || lengths.Length<1)
+                    return lengths;
+                var adjustedLengths = lengths.Clone() as int[];
+                adjustedLengths[adjustedLengths.Length - 1] -= 1;
+                return adjustedLengths;
+            }
+            return null;
+        }
+        public static bool operator ==(Disc lhs, Disc rhs)
+        {
+            // Check for null on left side.
+            if (Object.ReferenceEquals(lhs, null))
+            {
+                if (Object.ReferenceEquals(rhs, null))
+                {
+                    // null == null = true.
+                    return true;
+                }
+
+                // Only the left side is null.
+                return false;
+            }
+            // Equals handles case of null on right side.
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(Disc lhs, Disc rhs)
+        {
+            return !(lhs == rhs);
+        }
+        public virtual string toHtml(string artRelPath)
+        {
+            return null;
+        }
+    }
+
+    public class DiscDVD : Disc
+    {
+
+        static public readonly Dictionary<ushort, string> languageCode2String = new Dictionary<ushort, string> {
+            { (ushort)0x0000, "DiscMemo" },
+            { (ushort)0x1144, "English" }
+        };
+
+        static public readonly Dictionary<byte, string> characterCodeSet2String = new Dictionary<byte, string> {
+            { (byte)0x00, "ISO-646(ASCII)" },
+            { (byte)0x01, "ISO-8859" },
+            { (byte)0x10, "Disc Memo(ASCII)" }
+        };
+
         public class Text : IEquatable<Text>
         {
-//            public int? DiscNumber { get; set; }
-//            public int? titleTrackNumber { get; set; }
-//            public byte type { get; set; }
+            //            public int? DiscNumber { get; set; }
+            //            public int? titleTrackNumber { get; set; }
+            //            public byte type { get; set; }
             public string Language { get; set; }
-//            public string CharacterSet { get; set; }
+            //            public string CharacterSet { get; set; }
             public string TextString { get; set; }
 
             public override bool Equals(object obj)
@@ -174,109 +293,29 @@ namespace DiscChanger.Models
             }
         }
 
-        public class TOC : IEquatable<TOC>
-        {
-
-            public string[] Titles { get; set; }
-            public ConcurrentDictionary<string, int[]> TitleFrames { get; set; }
-
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as TOC);
-            }
-
-            public bool Equals(TOC other)
-            {
-                return other != null &&
-                       StructuralComparisons.StructuralEqualityComparer.Equals(Titles, other.Titles) &&
-                       Titles.All(t=>StructuralComparisons.StructuralEqualityComparer.Equals(TitleFrames[t], other.TitleFrames[t]));
-            }
-            //public override int GetHashCode()
-            //{
-            //    return HashCode.Combine;
-            //}
-
-            public static bool operator ==(TOC lhs, TOC rhs)
-            {
-                // Check for null on left side.
-                if (Object.ReferenceEquals(lhs, null))
-                {
-                    if (Object.ReferenceEquals(rhs, null))
-                    {
-                        // null == null = true.
-                        return true;
-                    }
-
-                    // Only the left side is null.
-                    return false;
-                }
-                // Equals handles case of null on right side.
-                return lhs.Equals(rhs);
-            }
-
-            public static bool operator !=(TOC lhs, TOC rhs)
-            {
-                return !(lhs == rhs);
-            }
-        }
-        public TOC TableOfContents { get; set; }
         public Text DiscText { get; set; }
-        public Data DiscData { get; set; }
-        public void Clear() { TableOfContents = null; DiscText = null; DiscData = null; }
-        public bool HasAll() { return DiscData != null && TableOfContents != null && (DiscText != null/*||!(DiscData.HasMemo||DiscData.HasText)*/); }
+        public override void Clear() { DiscText = null; base.Clear(); }
+        public override bool HasAll() { return base.HasAll() && (DiscText != null/*||!(DiscData.HasMemo||DiscData.HasText)*/); }
         public override bool Equals(object obj)
         {
-            return Equals(obj as Disc);
+            return Equals(obj as DiscCDText);
         }
-        public bool Equals(Disc other)
+        public bool Equals(DiscCDText other)
         {
-            return other != null && this.DiscData == other.DiscData && this.DiscText == other.DiscText && this.TableOfContents == other.TableOfContents;
+            return other != null && base.Equals( other ) && this.DiscText == other.DiscText;
         }
         public override int GetHashCode()
         {
-            return HashCode.Combine(DiscData, DiscText, TableOfContents);
-        }
-        public int[] StandardizedCDTableOfContents()
-        {
-            if (TableOfContents?.TitleFrames != null && TableOfContents.TitleFrames.TryGetValue("CD", out int[] lengths))
-            {
-                if (!this.DiscChanger.AdjustLastTrackLength || lengths.Length<1)
-                    return lengths;
-                var adjustedLengths = lengths.Clone() as int[];
-                adjustedLengths[adjustedLengths.Length - 1] -= 1;
-                return adjustedLengths;
-            }
-            return null;
-        }
-        public static bool operator ==(Disc lhs, Disc rhs)
-        {
-            // Check for null on left side.
-            if (Object.ReferenceEquals(lhs, null))
-            {
-                if (Object.ReferenceEquals(rhs, null))
-                {
-                    // null == null = true.
-                    return true;
-                }
-
-                // Only the left side is null.
-                return false;
-            }
-            // Equals handles case of null on right side.
-            return lhs.Equals(rhs);
+            return HashCode.Combine(base.GetHashCode(), DiscText);
         }
 
-        public static bool operator !=(Disc lhs, Disc rhs)
-        {
-            return !(lhs == rhs);
-        }
-        public string toHtml(string artRelPath)
+        public override string toHtml(string artRelPath)
         {
             var afn = LookupData?.ArtFileName;
-            var slotHtml = HtmlEncode(Slot??"--");
+            var slotHtml = HtmlEncode(Slot ?? "--");
             StringBuilder sb = new StringBuilder(@"<div class=""disc"" data-changer=""", 8192);
-            sb.Append(DiscChanger.Key); sb.Append(@""" data-slot= """);sb.Append(slotHtml);sb.Append(@"""><div class=""disc-header""><span class=""slot"">");
-            sb.Append(HtmlEncode(DiscChanger.Name));sb.Append(':');sb.Append(slotHtml);
+            sb.Append(DiscChanger.Key); sb.Append(@""" data-slot= """); sb.Append(slotHtml); sb.Append(@"""><div class=""disc-header""><span class=""slot"">");
+            sb.Append(HtmlEncode(DiscChanger.Name)); sb.Append(':'); sb.Append(slotHtml);
             sb.Append(@"</span><span class=""disc-type"">");
             sb.Append(HtmlEncode(DiscData?.DiscType ?? "-"));
             sb.Append("</span></div>");
@@ -290,13 +329,13 @@ namespace DiscChanger.Models
             if (a != null)
                 sb.Append(HtmlEncode(a));
             sb.Append(@"</div><div class=""title"">");
-            string t = LookupData?.Title??(DiscText?.TextString!=null?"CD-TEXT: "+DiscText.TextString:null);
+            string t = LookupData?.Title ?? (DiscText?.TextString != null ? "CD-TEXT: " + DiscText.TextString : null);
             if (t != null)
                 sb.Append(HtmlEncode(t));
             sb.Append(@"</div>");
             sb.Append(@"<div class=""data"" style=""display:none"">");
             var tracks = LookupData?.Tracks;
-            if (tracks == null && DiscData!=null&& DiscData.TrackCount()!=null)
+            if (tracks == null && DiscData != null && DiscData.TrackCount() != null)
                 tracks = Enumerable.Range(this.DiscData.StartTrackTitleAlbum.Value, DiscData.TrackCount().Value).Select(i => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = i; return t; }).ToArray();
             if (tracks != null)
             {
@@ -309,7 +348,7 @@ namespace DiscChanger.Models
                     sb.Append(track.Position);
                     sb.Append(@")""><td>");
                     sb.Append(track.Position);
-                    sb.Append(@"</td><td>"); sb.Append(HtmlEncode(track.Title??"---")); sb.Append("</td><td>");
+                    sb.Append(@"</td><td>"); sb.Append(HtmlEncode(track.Title ?? "---")); sb.Append("</td><td>");
                     sb.Append(track.Length?.ToString(@"h\:mm\:ss") ?? "--");
                     sb.Append(@"</td></tr>");
                 }
@@ -333,4 +372,143 @@ namespace DiscChanger.Models
             return sb.ToString();
         }
     }
+
+    public class DiscBD : Disc
+    {
+        enum discInfoDataType { AlbumTitleOrDiscName=0, TrackOrTitleName, AlbumOrDiscGenre, TrackOrTitleGenre };
+//"0x00 : Album Title(CDDA) / Disc Name (DVD and BD)
+//0x01 : Track Name(CDDA) / Title Name(DVD and BD)
+//0x02 : Album Genre(CDDA) / Disc Genre(DVD and BD)
+//0x03 : Title Genre / Track Genre "							
+
+
+        static public readonly Dictionary<ushort, string> languageCode2String = new Dictionary<ushort, string> {
+            { (ushort)0x0000, "DiscMemo" },
+            { (ushort)0x1144, "English" }
+        };
+
+        static public readonly Dictionary<byte, string> characterCodeSet2String = new Dictionary<byte, string> {
+            { (byte)0x00, "ISO-646(ASCII)" },
+            { (byte)0x01, "ISO-8859" },
+            { (byte)0x10, "Disc Memo(ASCII)" }
+        };
+
+        public class Information : IEquatable<Information>
+        {
+            //            public int? DiscNumber { get; set; }
+            //            public int? titleTrackNumber { get; set; }
+            //            public byte type { get; set; }
+            public string DiscType { get; set; }
+            public string AlbumTitleOrDiscName { get; set; }
+            public string AlbumOrDiscGenre { get; set; }
+            //            public string CharacterSet { get; set; }
+            public struct TrackOrTitle
+            {
+                public string Name { get; set; }
+                public string Genre { get; set; }
+            }
+            public TrackOrTitle[] TracksOrTitles { get; set; }
+
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as Information);
+            }
+
+            public bool Equals(Information other)
+            {
+                return other != null &&
+                       DiscType == other.DiscType &&
+                       AlbumTitleOrDiscName == other.AlbumTitleOrDiscName &&
+                       AlbumOrDiscGenre == other.AlbumOrDiscGenre &&
+                       StructuralComparisons.StructuralEqualityComparer.Equals(TracksOrTitles, other.TracksOrTitles);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(base.GetHashCode(), AlbumOrDiscGenre, AlbumTitleOrDiscName, DiscType, StructuralComparisons.StructuralEqualityComparer.GetHashCode(TracksOrTitles));
+            }
+        }
+
+        public Information DiscInformation { get; set; }
+
+
+        public override void Clear() { DiscInformation = null; base.Clear(); }
+        public override bool HasAll() { return base.HasAll() && (DiscInformation != null/*||!(DiscData.HasMemo||DiscData.HasText)*/); }
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as DiscBD);
+        }
+        public bool Equals(DiscBD other)
+        {
+            return other != null && base.Equals(other) && this.DiscInformation == other.DiscInformation;
+        }
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(base.GetHashCode(), DiscInformation);
+        }
+
+        public override string toHtml(string artRelPath)
+        {
+            var afn = LookupData?.ArtFileName;
+            var slotHtml = HtmlEncode(Slot ?? "--");
+            StringBuilder sb = new StringBuilder(@"<div class=""disc"" data-changer=""", 8192);
+            sb.Append(DiscChanger.Key); sb.Append(@""" data-slot= """); sb.Append(slotHtml); sb.Append(@"""><div class=""disc-header""><span class=""slot"">");
+            sb.Append(HtmlEncode(DiscChanger.Name)); sb.Append(':'); sb.Append(slotHtml);
+            sb.Append(@"</span><span class=""disc-type"">");
+            sb.Append(HtmlEncode(DiscData?.DiscType ?? "-"));
+            sb.Append("</span></div>");
+
+            if (afn != null && artRelPath != null)
+            {
+                sb.Append("<img src = \""); sb.Append(artRelPath); sb.Append('/'); sb.Append(HttpUtility.UrlEncode(afn)); sb.Append(@"""/>");
+            }
+            sb.Append(@"<div class=""artist"">");
+            string a = LookupData?.Artist;
+            if (a != null)
+                sb.Append(HtmlEncode(a));
+            sb.Append(@"</div><div class=""title"">");
+            string t = LookupData?.Title ?? (DiscText?.TextString != null ? "CD-TEXT: " + DiscText.TextString : null);
+            if (t != null)
+                sb.Append(HtmlEncode(t));
+            sb.Append(@"</div>");
+            sb.Append(@"<div class=""data"" style=""display:none"">");
+            var tracks = LookupData?.Tracks;
+            if (tracks == null && DiscData != null && DiscData.TrackCount() != null)
+                tracks = Enumerable.Range(this.DiscData.StartTrackTitleAlbum.Value, DiscData.TrackCount().Value).Select(i => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = i; return t; }).ToArray();
+            if (tracks != null)
+            {
+                sb.Append(@"<table class=""tracks"">");
+                foreach (var track in tracks)
+                {
+                    sb.Append(@"<tr onclick = ""dt('");
+                    sb.Append(DiscChanger.Key); sb.Append("',");
+                    sb.Append(slotHtml); sb.Append(',');
+                    sb.Append(track.Position);
+                    sb.Append(@")""><td>");
+                    sb.Append(track.Position);
+                    sb.Append(@"</td><td>"); sb.Append(HtmlEncode(track.Title ?? "---")); sb.Append("</td><td>");
+                    sb.Append(track.Length?.ToString(@"h\:mm\:ss") ?? "--");
+                    sb.Append(@"</td></tr>");
+                }
+                sb.Append(@"</table>");
+            }
+            if (LookupData != null)
+            {
+                sb.Append(@"<div class=""urls"">");
+                var urls = LookupData?.URLs;
+                if (urls != null)
+                    foreach (var url in urls)
+                    {
+                        sb.Append(@"<a href = """); sb.Append(url); sb.Append(@""" target = ""_blank""></a>");
+                    }
+                sb.Append(@"<a class=""diag"" href = """); sb.Append(LookupData.diagURL()); sb.Append(@""" target = ""_blank""></a>");
+                sb.Append(@"</div>");
+            }
+
+            sb.Append(@"</div>");
+            sb.Append(@"</div>");
+            return sb.ToString();
+        }
+    }
+
 }

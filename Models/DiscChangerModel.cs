@@ -46,6 +46,18 @@ namespace DiscChanger.Models
         private ILogger<DiscChangerService> logger;
         private IHubContext<DiscChangerHub> hubContext;
         private SerialPort serialPort;
+        static public DiscChangerModel Create( string Type )
+        {
+            switch( Type )
+            {
+                case DiscChangerService.BDP_CX7000ES:
+                    return new DiscChangerBD(Type);
+                case DiscChangerService.DVP_CX777ES:
+                    return new DiscChangerDVD(Type);
+                default:
+                    throw new Exception($"DiscChangerModel.Create unknown type {Type}");
+            }
+        }
         static Dictionary<string, byte> CommandMode2PDC = new Dictionary<string, byte> { { "BD1", (byte)0x80 }, { "BD2", (byte)0x81 }, { "BD3", (byte)0x82 } };
         static Dictionary<string, byte> CommandMode2ResponsePDC = new Dictionary<string, byte> { { "BD1", (byte)0x88 }, { "BD2", (byte)0x89 }, { "BD3", (byte)0x8A } };
         byte PDC=0xD0;
@@ -287,9 +299,9 @@ namespace DiscChanger.Models
             }
             return sb.ToString();
         }
-        public bool SupportsCommand(string command)
+        public virtual bool SupportsCommand(string command)
         {
-            return this.Type==DiscChangerService.BDP_CX7000ES||command!="open";
+            return false;
         }
         internal async Task<string> Test()
         {
@@ -314,7 +326,6 @@ namespace DiscChanger.Models
         }
 
     public ConcurrentDictionary<string, Disc> Discs = new ConcurrentDictionary<string, Disc>();
-        public List<Disc> DiscList { get; set; }
         public bool? HardwareFlowControl { get; set; }
 
         DiscChangerService discChangerService;
@@ -1039,6 +1050,22 @@ namespace DiscChanger.Models
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
+        }
+    }
+    public class DiscChangerDVD : DiscChangerModel
+    {
+        public DiscChangerDVD(string Type) { this.Type = Type; }
+        public override bool SupportsCommand(string command)
+        {
+            return command != "open";
+        }
+    }
+    public class DiscChangerBD : DiscChangerModel
+    {
+        public DiscChangerBD(string Type) { this.Type = Type; }
+        public override bool SupportsCommand(string command)
+        {
+            return true;
         }
     }
 }

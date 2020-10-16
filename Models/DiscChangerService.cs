@@ -89,8 +89,12 @@ namespace DiscChanger.Models
             //    f.Close();
             //    needsSaving = false;
             //}
+//            The following code registers the converter:
 
-            DiscChangers = File.Exists(discChangersJsonFileName) ? JsonSerializer.Deserialize<List<DiscChangerModel>>(File.ReadAllText(discChangersJsonFileName)) : new List<DiscChangerModel>();
+            var serializeOptions = new JsonSerializerOptions();
+            serializeOptions.Converters.Add(new DiscChangerConverter());
+
+            DiscChangers = File.Exists(discChangersJsonFileName) ? JsonSerializer.Deserialize<List<DiscChangerModel>>(new Utf8JsonReader(File.ReadAllBytes(discChangersJsonFileName)) : new List<DiscChangerModel>();
             discLookup = new MusicBrainz(Path.Combine(discsPath, "MusicBrainz"), discsRelPath+"/MusicBrainz");
 
             key2DiscChanger = new Dictionary<string, DiscChangerModel>(DiscChangers.Count);
@@ -235,7 +239,7 @@ namespace DiscChanger.Models
                 using (var f = File.Create(discChangersJsonFileName))
                 {
                     var w = new Utf8JsonWriter(f, new JsonWriterOptions { Indented = true });
-                    JsonSerializer.Serialize(w, DiscChangers);
+                    JsonSerializer.Serialize(w, DiscChangers, new JsonSerializerOptions { IgnoreNullValues = true });
                     f.Close();
                     needsSaving = false;
                 }
