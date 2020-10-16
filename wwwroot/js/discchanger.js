@@ -17,7 +17,7 @@
 */
 "use strict";
 
-var connection = new signalR.HubConnectionBuilder().withUrl("/discChangerHub").build();
+var connection = new signalR.HubConnectionBuilder().withUrl("/discChangerHub").withAutomaticReconnect().build();
 
 const mainPlayerControls = ["open", "play", "pause", "stop"];
 const otherPlayerControls = ["previous", "next", "rev_scan", "fwd_scan", "time_text", "discs","scan","delete-discs",
@@ -25,19 +25,22 @@ const otherPlayerControls = ["previous", "next", "rev_scan", "fwd_scan", "time_t
 const allPlayerControls = mainPlayerControls.concat(otherPlayerControls);
 
 function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc) {
+//	console.log(Date.now(), 'updateControls', changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc);
     var isOff = status == "off";
     var suffix = '_' + changer;
-    allPlayerControls.forEach(function (item, i) {
+	var item;
+    for(item of allPlayerControls) {
         var buttonElement = document.getElementById(item + suffix).parentElement;
         var b = isOff || buttonElement.dataset.disabled;
         buttonElement.disabled = b;
-    });
-    mainPlayerControls.forEach(function (item, i) {
+    }
+    for(item of mainPlayerControls) {
+		var e=document.getElementById(item + suffix);
         if (item == status && !isOff)
-            document.getElementById(item + suffix).classList.add("btn-active");
+            e.classList.add("btn-active");
         else
-            document.getElementById(item + suffix).classList.remove("btn-active");
-    });
+            e.classList.remove("btn-active");
+    }
     if (modeDisc == "all" && !isOff)
         document.getElementById("discs" + suffix).classList.add("btn-active");
     else
@@ -48,6 +51,7 @@ function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, sta
     document.getElementById("disc_number" + suffix).value = isOff ? null : slot;
     document.getElementById("title_album_number" + suffix).value = (isOff || titleAlbumNumber==0) ? null : titleAlbumNumber;
     document.getElementById("chapter_track_number" + suffix).value = (isOff || chapterTrackNumber==0) ? null : chapterTrackNumber;
+//	console.log(Date.now(), 'EndUpdateControls', changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc);	
 }
 
 function setup_popover(jq) {
