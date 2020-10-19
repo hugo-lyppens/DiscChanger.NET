@@ -18,6 +18,7 @@
 "use strict";
 
 var connection = new signalR.HubConnectionBuilder().withUrl("/discChangerHub").withAutomaticReconnect().build();
+//configureLogging(signalR.LogLevel.Debug).
 
 const mainPlayerControls = ["open", "play", "pause", "stop"];
 const otherPlayerControls = ["previous", "next", "rev_scan", "fwd_scan", "time_text", "discs","scan","delete-discs",
@@ -53,6 +54,9 @@ function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, sta
     document.getElementById("chapter_track_number" + suffix).value = (isOff || chapterTrackNumber==0) ? null : chapterTrackNumber;
 //	console.log(Date.now(), 'EndUpdateControls', changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc);	
 }
+function updateControls2(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc) {
+	setTimeout(function(){updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc);});
+}
 
 function setup_popover(jq) {
     jq.popover({
@@ -66,7 +70,6 @@ function setup_popover(jq) {
         html: true,
         sanitize: false
     });
-//    document.querySelectorAll('.config').forEach(function (e) { e.hidden = off; });
 }
 
 function updateDisc(newChanger, newSlot, discHtml) {
@@ -124,7 +127,7 @@ function reload() {
     window.location.reload(true);
 }
 
-connection.on("StatusData", updateControls);
+connection.on("StatusData", updateControls2);
 connection.on("DiscData", updateDisc);
 connection.on("ScanStatus", scanStatus);
 connection.on("ScanInProgress", scanInProgress);
