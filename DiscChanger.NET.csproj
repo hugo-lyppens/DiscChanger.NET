@@ -7,12 +7,16 @@
 
   <ItemGroup>
     <Compile Remove="Pages\Backup\**" />
+    <Compile Remove="private\**" />
     <Compile Remove="wwwroot\Discs\**" />
     <Content Remove="Pages\Backup\**" />
+    <Content Remove="private\**" />
     <Content Remove="wwwroot\Discs\**" />
     <EmbeddedResource Remove="Pages\Backup\**" />
+    <EmbeddedResource Remove="private\**" />
     <EmbeddedResource Remove="wwwroot\Discs\**" />
     <None Remove="Pages\Backup\**" />
+    <None Remove="private\**" />
     <None Remove="wwwroot\Discs\**" />
   </ItemGroup>
 
