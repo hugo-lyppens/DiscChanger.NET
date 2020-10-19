@@ -42,13 +42,14 @@ function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, sta
         else
             e.classList.remove("btn-active");
     }
+    item = document.getElementById("discs" + suffix);
     if (modeDisc == "all" && !isOff)
-        document.getElementById("discs" + suffix).classList.add("btn-active");
+        item.classList.add("btn-active");
     else
-        document.getElementById("discs" + suffix).classList.remove("btn-active");
+        item.classList.remove("btn-active");
     var s = isOff ? ['btn-off', 'btn-on'] : ['btn-on', 'btn-off'];
-    document.getElementById("power" + suffix).classList.add(s[0]);
-    document.getElementById("power" + suffix).classList.remove(s[1]);
+    item = document.getElementById("power" + suffix);
+    item.classList.add(s[0]); item.classList.remove(s[1]);
     document.getElementById("disc_number" + suffix).value = isOff ? null : slot;
     document.getElementById("title_album_number" + suffix).value = (isOff || titleAlbumNumber==0) ? null : titleAlbumNumber;
     document.getElementById("chapter_track_number" + suffix).value = (isOff || chapterTrackNumber==0) ? null : chapterTrackNumber;
