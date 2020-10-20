@@ -21,6 +21,8 @@ button.config
     background-color: lightsteelblue;
     color: black;
 }
+
+
 .btn[disabled]:hover {
     color:white;
     cursor:default;
@@ -33,14 +35,13 @@ button.config
 .btn-active {
     color: red;
 }
-.btn-on {
+
+.btn-power-on {
     color: red;
 }
-.btn-off {
+
+.btn-power {
     color: LightGrey;
-}
-.btn-off:hover {
-    color: black;
 }
 
 #discs-table {

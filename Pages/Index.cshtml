@@ -49,7 +49,7 @@
                                 <td class="changer-name" id="name_@key">@name</td>
                                 <td>
                                     <div id="controls_@key" style="display:@controlsDisplay;">
-                                        <button class="btn" title="Toggle disc changer power" onclick="control('@key','power')"><i id="power_@key" class="fas fa-power-off fa-lg"></i></button>
+                                        <button class="btn btn-power" title="Toggle disc changer power" onclick="control('@key','power')"><i id="power_@key" class="fas fa-power-off fa-lg"></i></button>
                                         <button class="btn" @Html.Raw(dc.SupportsCommand("open") ? "title=\"Open/Close door\"" : "title=\"Unsupported on " + changerType + ": Open/Close door\" data-disabled=\"true\"") onclick="control('@key','open')"><i id="open_@key" class="fas fa-door-open fa-lg"></i></button>
                                         <button class="btn" title="Previous track" onclick="control('@key','previous')"><i id="previous_@key" class="fas fa-fast-backward fa-lg"></i></button>
                                         <button class="btn" title="Next track" onclick="control('@key','next')"><i id="next_@key" class="fas fa-fast-forward fa-lg"></i></button>

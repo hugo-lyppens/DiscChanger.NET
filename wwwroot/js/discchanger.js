@@ -27,7 +27,7 @@ const allPlayerControls = mainPlayerControls.concat(otherPlayerControls);
 
 function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc) {
 //	console.log(Date.now(), 'updateControls', changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc);
-    var isOff = status == "off";
+    var isOff = (status == "off");
     var suffix = '_' + changer;
 	var item;
     for(item of allPlayerControls) {
@@ -36,27 +36,13 @@ function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, sta
         buttonElement.disabled = b;
     }
     for(item of mainPlayerControls) {
-		var e=document.getElementById(item + suffix);
-        if (item == status && !isOff)
-            e.classList.add("btn-active");
-        else
-            e.classList.remove("btn-active");
+        document.getElementById(item + suffix).classList.toggle("btn-active", item == status && !isOff);
     }
-    item = document.getElementById("discs" + suffix);
-    if (modeDisc == "all" && !isOff)
-        item.classList.add("btn-active");
-    else
-        item.classList.remove("btn-active");
-    var s = isOff ? ['btn-off', 'btn-on'] : ['btn-on', 'btn-off'];
-    item = document.getElementById("power" + suffix);
-    item.classList.add(s[0]); item.classList.remove(s[1]);
+    document.getElementById("discs" + suffix).classList.toggle("btn-active", modeDisc == "all" && !isOff);
+    document.getElementById("power" + suffix).classList.toggle('btn-power-on', !isOff);
     document.getElementById("disc_number" + suffix).value = isOff ? null : slot;
     document.getElementById("title_album_number" + suffix).value = (isOff || titleAlbumNumber==0) ? null : titleAlbumNumber;
     document.getElementById("chapter_track_number" + suffix).value = (isOff || chapterTrackNumber==0) ? null : chapterTrackNumber;
-//	console.log(Date.now(), 'EndUpdateControls', changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc);	
-}
-function updateControls2(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc) {
-	setTimeout(function(){updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc);});
 }
 
 function setup_popover(jq) {
@@ -128,7 +114,7 @@ function reload() {
     window.location.reload(true);
 }
 
-connection.on("StatusData", updateControls2);
+connection.on("StatusData", updateControls);
 connection.on("DiscData", updateDisc);
 connection.on("ScanStatus", scanStatus);
 connection.on("ScanInProgress", scanInProgress);
@@ -213,14 +199,14 @@ function discDirect(key) {
 
 function dt(key, slot, chapterTrackNumber) {
     var suffix = '_' + key;
-    var b = document.getElementById("power" + suffix).classList.contains('btn-on');
+    var b = document.getElementById("power" + suffix).classList.contains('btn-power-on');
     document.getElementById("disc_number" + suffix).value = b ? slot : null;
     document.getElementById("title_album_number" + suffix).value = null;
     document.getElementById("chapter_track_number" + suffix).value = (b && chapterTrackNumber ) ? chapterTrackNumber:null;
 }
 
 function toggle_config() {
-    var on = document.getElementById("edit").classList.toggle('btn-on');
+    var on = document.getElementById("edit").classList.toggle('btn-power-on');
     document.querySelectorAll('.config').forEach(function (e) { e.hidden = !on; });
     document.querySelectorAll('.hide-on-config').forEach(function (e) { e.hidden = on; });
 }
