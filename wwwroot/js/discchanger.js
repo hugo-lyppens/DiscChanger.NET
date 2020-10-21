@@ -124,6 +124,16 @@ connection.start().then(function () {
     return console.error(err.toString());
 });
 
+function scroll_into_view(changerKey) {
+    var slot = document.getElementById("disc_number_" + changerKey).value;
+    if (slot) {
+        var discElement = document.querySelector('[data-changer="'+changerKey+'"][data-slot="'+slot+'"]');
+        if (discElement) {
+            discElement.scrollIntoView(false);
+        }
+    }
+}
+
 function control(changerKey,command) {
     if (command) {
         connection.invoke("Control", changerKey, command).catch(function (err) {

@@ -1,5 +1,8 @@
 ﻿/* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
 for details on configuring this project to bundle and minify static web assets. */
+.changer-name {
+    cursor: pointer; /* Mouse pointer on hover */
+}
 
 .btn {
     background-color: steelblue; /* #64A0c8Blue background */
