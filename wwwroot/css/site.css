@@ -1,5 +1,8 @@
 ﻿/* Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
 for details on configuring this project to bundle and minify static web assets. */
+.changer-name {
+    cursor: pointer; /* Mouse pointer on hover */
+}
 
 .btn {
     background-color: steelblue; /* #64A0c8Blue background */
@@ -21,6 +24,8 @@ button.config
     background-color: lightsteelblue;
     color: black;
 }
+
+
 .btn[disabled]:hover {
     color:white;
     cursor:default;
@@ -33,14 +38,13 @@ button.config
 .btn-active {
     color: red;
 }
-.btn-on {
+
+.btn-power-on {
     color: red;
 }
-.btn-off {
+
+.btn-power {
     color: LightGrey;
-}
-.btn-off:hover {
-    color: black;
 }
 
 #discs-table {

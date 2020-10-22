@@ -17,7 +17,8 @@
 */
 "use strict";
 
-var connection = new signalR.HubConnectionBuilder().withUrl("/discChangerHub").build();
+var connection = new signalR.HubConnectionBuilder().withUrl("/discChangerHub").withAutomaticReconnect().build();
+//configureLogging(signalR.LogLevel.Debug).
 
 const mainPlayerControls = ["open", "play", "pause", "stop"];
 const otherPlayerControls = ["previous", "next", "rev_scan", "fwd_scan", "time_text", "discs","scan","delete-discs",
@@ -25,26 +26,20 @@ const otherPlayerControls = ["previous", "next", "rev_scan", "fwd_scan", "time_t
 const allPlayerControls = mainPlayerControls.concat(otherPlayerControls);
 
 function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc) {
-    var isOff = status == "off";
+//	console.log(Date.now(), 'updateControls', changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc);
+    var isOff = (status == "off");
     var suffix = '_' + changer;
-    allPlayerControls.forEach(function (item, i) {
+	var item;
+    for(item of allPlayerControls) {
         var buttonElement = document.getElementById(item + suffix).parentElement;
         var b = isOff || buttonElement.dataset.disabled;
         buttonElement.disabled = b;
-    });
-    mainPlayerControls.forEach(function (item, i) {
-        if (item == status && !isOff)
-            document.getElementById(item + suffix).classList.add("btn-active");
-        else
-            document.getElementById(item + suffix).classList.remove("btn-active");
-    });
-    if (modeDisc == "all" && !isOff)
-        document.getElementById("discs" + suffix).classList.add("btn-active");
-    else
-        document.getElementById("discs" + suffix).classList.remove("btn-active");
-    var s = isOff ? ['btn-off', 'btn-on'] : ['btn-on', 'btn-off'];
-    document.getElementById("power" + suffix).classList.add(s[0]);
-    document.getElementById("power" + suffix).classList.remove(s[1]);
+    }
+    for(item of mainPlayerControls) {
+        document.getElementById(item + suffix).classList.toggle("btn-active", item == status && !isOff);
+    }
+    document.getElementById("discs" + suffix).classList.toggle("btn-active", modeDisc == "all" && !isOff);
+    document.getElementById("power" + suffix).classList.toggle('btn-power-on', !isOff);
     document.getElementById("disc_number" + suffix).value = isOff ? null : slot;
     document.getElementById("title_album_number" + suffix).value = (isOff || titleAlbumNumber==0) ? null : titleAlbumNumber;
     document.getElementById("chapter_track_number" + suffix).value = (isOff || chapterTrackNumber==0) ? null : chapterTrackNumber;
@@ -62,7 +57,6 @@ function setup_popover(jq) {
         html: true,
         sanitize: false
     });
-//    document.querySelectorAll('.config').forEach(function (e) { e.hidden = off; });
 }
 
 function updateDisc(newChanger, newSlot, discHtml) {
@@ -129,6 +123,16 @@ connection.start().then(function () {
 }).catch(function (err) {
     return console.error(err.toString());
 });
+
+function scroll_into_view(changerKey) {
+    var slot = document.getElementById("disc_number_" + changerKey).value;
+    if (slot) {
+        var discElement = document.querySelector('[data-changer="'+changerKey+'"][data-slot="'+slot+'"]');
+        if (discElement) {
+            discElement.scrollIntoView(false);
+        }
+    }
+}
 
 function control(changerKey,command) {
     if (command) {
@@ -205,14 +209,14 @@ function discDirect(key) {
 
 function dt(key, slot, chapterTrackNumber) {
     var suffix = '_' + key;
-    var b = document.getElementById("power" + suffix).classList.contains('btn-on');
+    var b = document.getElementById("power" + suffix).classList.contains('btn-power-on');
     document.getElementById("disc_number" + suffix).value = b ? slot : null;
     document.getElementById("title_album_number" + suffix).value = null;
     document.getElementById("chapter_track_number" + suffix).value = (b && chapterTrackNumber ) ? chapterTrackNumber:null;
 }
 
 function toggle_config() {
-    var on = document.getElementById("edit").classList.toggle('btn-on');
+    var on = document.getElementById("edit").classList.toggle('btn-power-on');
     document.querySelectorAll('.config').forEach(function (e) { e.hidden = !on; });
     document.querySelectorAll('.hide-on-config').forEach(function (e) { e.hidden = on; });
 }
