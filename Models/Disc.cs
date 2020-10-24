@@ -28,7 +28,7 @@ using System.Web;
 namespace DiscChanger.Models
 {
     //    public class Disc : IHostedService, IDisposable
-    public class Disc : IEquatable<Disc>
+    public abstract class Disc : IEquatable<Disc>
     {
         public const string DiscTypeNone = "None";
         static public readonly Dictionary<byte, string> discType2String = new Dictionary<byte, string> {
@@ -125,6 +125,14 @@ namespace DiscChanger.Models
                 return !(lhs == rhs);
             }
         };
+
+        internal int CompareTo(Disc other)
+        {
+            if (Int32.TryParse(Slot, out int thisSlot) && Int32.TryParse(other.Slot, out int otherSlot))
+                return thisSlot.CompareTo(otherSlot);
+            return Slot.CompareTo(other.Slot);
+        }
+
         public class TOC : IEquatable<TOC>
         {
 
@@ -224,10 +232,7 @@ namespace DiscChanger.Models
         {
             return !(lhs == rhs);
         }
-        public virtual string toHtml(string artRelPath)
-        {
-            return null;
-        }
+        public abstract string toHtml(string artRelPath);
     }
 
     public class DiscDVD : Disc
@@ -298,9 +303,9 @@ namespace DiscChanger.Models
         public override bool HasAll() { return base.HasAll() && (DiscText != null/*||!(DiscData.HasMemo||DiscData.HasText)*/); }
         public override bool Equals(object obj)
         {
-            return Equals(obj as DiscCDText);
+            return Equals(obj as DiscDVD);
         }
-        public bool Equals(DiscCDText other)
+        public bool Equals(DiscDVD other)
         {
             return other != null && base.Equals( other ) && this.DiscText == other.DiscText;
         }
@@ -467,7 +472,7 @@ namespace DiscChanger.Models
             if (a != null)
                 sb.Append(HtmlEncode(a));
             sb.Append(@"</div><div class=""title"">");
-            string t = LookupData?.Title ?? (DiscText?.TextString != null ? "CD-TEXT: " + DiscText.TextString : null);
+            string t = LookupData?.Title;// ?? (DiscText?.TextString != null ? "CD-TEXT: " + DiscText.TextString : null);
             if (t != null)
                 sb.Append(HtmlEncode(t));
             sb.Append(@"</div>");

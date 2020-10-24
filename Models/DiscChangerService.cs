@@ -62,6 +62,44 @@ namespace DiscChanger.Models
             discsRelPath = "Discs";
             discsPath    = Path.Combine(webRootPath, discsRelPath );
         }
+        private void Load()
+        {
+            this._logger.LogInformation("Loading from " + discChangersJsonFileName);
+            DiscChangers = File.Exists(discChangersJsonFileName) ? JsonSerializer.Deserialize<List<DiscChangerModel>>(File.ReadAllBytes(discChangersJsonFileName)) : new List<DiscChangerModel>();
+            //using (var f = File.Create(@"C:\Temp\dc.json"))
+            //{
+            //    var discs = DiscChangers[2].Discs;
+            //    for(int i=0;i<55;i++)
+            //    {
+            //        string oldSlot = (345 + i).ToString();
+            //        string newSlot = (290 + i).ToString();
+            //        if(discs.TryRemove(oldSlot, out Disc d))
+            //        {
+            //            d.Slot = newSlot;
+            //            discs[newSlot] = d;
+            //        }
+            //    }
+            //    var w = new Utf8JsonWriter(f, new JsonWriterOptions { Indented = true });
+            //    JsonSerializer.Serialize(w, DiscChangers, new JsonSerializerOptions { IgnoreNullValues = true });
+            //    f.Close();
+            //}
+            needsSaving = false;
+        }
+        private void Save()
+        {
+            this._logger.LogInformation("Saving to " + discChangersJsonFileName);
+            lock (this.DiscChangers)
+            {
+                using (var f = File.Create(discChangersJsonFileName))
+                {
+                    var w = new Utf8JsonWriter(f, new JsonWriterOptions { Indented = true });
+                    JsonSerializer.Serialize(w, DiscChangers, new JsonSerializerOptions { IgnoreNullValues = true });
+                    f.Close();
+                    needsSaving = false;
+                }
+            }
+        }
+
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Timed Hosted Service running.");
@@ -91,28 +129,18 @@ namespace DiscChanger.Models
             //}
 //            The following code registers the converter:
 
-            var serializeOptions = new JsonSerializerOptions();
-            serializeOptions.Converters.Add(new DiscChangerConverter());
-
-            DiscChangers = File.Exists(discChangersJsonFileName) ? JsonSerializer.Deserialize<List<DiscChangerModel>>(new Utf8JsonReader(File.ReadAllBytes(discChangersJsonFileName)) : new List<DiscChangerModel>();
+            Load();
             discLookup = new MusicBrainz(Path.Combine(discsPath, "MusicBrainz"), discsRelPath+"/MusicBrainz");
 
             key2DiscChanger = new Dictionary<string, DiscChangerModel>(DiscChangers.Count);
             foreach (var discChanger in DiscChangers)
             {
-                var discs = new ConcurrentDictionary<string, Disc>();
-                if (discChanger.DiscList != null)
-                {
-                    foreach (var d in discChanger.DiscList)
-                    {
-                        d.DiscChanger = discChanger;
-                        d.LookupData = discLookup.Get(d);
-                        discs[d.Slot] = d;
-                    }
-                    discChanger.DiscList = null;
-                }
-                discChanger.Discs = discs;
                 key2DiscChanger[discChanger.Key] = discChanger;
+                foreach (var kvp in discChanger.Discs)
+                {
+                    Disc d = kvp.Value;
+                    d.LookupData = discLookup.Get(d);
+                }
                 try
                 {
                     discChanger.Connect(this, _hubContext, _logger);
@@ -218,42 +246,13 @@ namespace DiscChanger.Models
             }
         }
 
-        private void Save()
-        {
-            this._logger.LogInformation("Saving to " + discChangersJsonFileName);
-            lock (this.DiscChangers)
-            {
-                foreach (var discChanger in DiscChangers)
-                {
-                    if (discChanger.Discs != null)
-                    {
-                        List<Disc> dl = new List<Disc>(discChanger.Discs.Count);
-                        foreach (var kvp in discChanger.Discs)
-                        {
-                            dl.Add(kvp.Value);
-                        }
-                        discChanger.DiscList = dl.OrderBy(d => Int32.Parse(d.Slot)).ToList();
-                    }
-                }
-
-                using (var f = File.Create(discChangersJsonFileName))
-                {
-                    var w = new Utf8JsonWriter(f, new JsonWriterOptions { Indented = true });
-                    JsonSerializer.Serialize(w, DiscChangers, new JsonSerializerOptions { IgnoreNullValues = true });
-                    f.Close();
-                    needsSaving = false;
-                }
-                foreach (var discChanger in DiscChangers)
-                    discChanger.DiscList = null;
-            }
-        }
         internal async Task<string> Test(string key, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl)
         {
             DiscChangerModel d = null;
             bool b = key!=null&&key2DiscChanger.TryGetValue(key, out d) && connection == d.Connection && portName == d.PortName;
             if (b)
                 d.Disconnect();
-            DiscChangerModel dc = new DiscChangerModel();
+            DiscChangerModel dc = DiscChangerModel.Create(type);
             try
             {
                 dc.Type = type;
@@ -289,7 +288,7 @@ namespace DiscChanger.Models
                     i++;
                     key = keyBase + i.ToString();
                 }
-                DiscChangerModel dc = new DiscChangerModel(key);
+                DiscChangerModel dc = DiscChangerModel.Create(type);dc.Key = key;
                 dc.ReverseDiscExistBytes = (type == DiscChangerService.BDP_CX7000ES);
                 dc.AdjustLastTrackLength = true;//This appears to be necessary for both CX777ES and CX7000ES.
                 Update(dc, name, type, connection, commandMode, portName, HardwareFlowControl);

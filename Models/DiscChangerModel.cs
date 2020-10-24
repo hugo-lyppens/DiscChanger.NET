@@ -29,10 +29,12 @@ using DiscChanger.Hubs;
 using System.Collections;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
+using System.Text.Json.Serialization;
 
 namespace DiscChanger.Models
 {
-    public class DiscChangerModel: IDisposable
+    [JsonConverter(typeof(DiscChangerModelConverter))]
+    public abstract class DiscChangerModel: IDisposable
     {
         public string Name { get; set; }
         public string Key { get; set; }
@@ -58,6 +60,16 @@ namespace DiscChanger.Models
                     throw new Exception($"DiscChangerModel.Create unknown type {Type}");
             }
         }
+
+        internal abstract Type getDiscType();
+
+        internal void setDisc(string slot, Disc d)
+        {
+            d.DiscChanger = this;
+            d.Slot = slot;
+            Discs[slot] = d;
+        }
+
         static Dictionary<string, byte> CommandMode2PDC = new Dictionary<string, byte> { { "BD1", (byte)0x80 }, { "BD2", (byte)0x81 }, { "BD3", (byte)0x82 } };
         static Dictionary<string, byte> CommandMode2ResponsePDC = new Dictionary<string, byte> { { "BD1", (byte)0x88 }, { "BD2", (byte)0x89 }, { "BD3", (byte)0x8A } };
         byte PDC=0xD0;
@@ -97,6 +109,12 @@ namespace DiscChanger.Models
     0x0f, 0x8f, 0x4f, 0xcf, 0x2f, 0xaf, 0x6f, 0xef,
     0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
 };
+
+        internal object toDiscList()
+        {
+            throw new NotImplementedException();
+        }
+
         internal BitArray getDiscsPresent()
         {
             byte[] discExistBitReq = new byte[] { PDC, 0x8C };
@@ -657,7 +675,7 @@ namespace DiscChanger.Models
             newDisc=null; newDiscNumber=null;
         }
         System.Threading.Timer _timer;
-        Disc newDisc;
+        DiscDVD newDisc;
         int? newDiscNumber;
         private bool disposedValue;
 
@@ -741,7 +759,7 @@ namespace DiscChanger.Models
                                             if (newDisc == null || newDiscNumber != discNumber)
                                             {
                                                 newDiscNumber = discNumber;
-                                                newDisc = new Disc(); 
+                                                newDisc = new DiscDVD(); 
                                                 _timer.Change(TimeSpan.FromSeconds(15), Timeout.InfiniteTimeSpan);
                                             }
                                             newDisc.DiscData = dd;
@@ -753,7 +771,7 @@ namespace DiscChanger.Models
                                         discNumber = FromBCD(b[2], b[3]);
                                         int? titleTrackNumber = FromBCD(b[4]); //reserved 0x00
                                         byte type = b[5]; //reserved 0x00
-                                        string characterSet = Disc.characterCodeSet2String[b[8]];
+                                        string characterSet = DiscDVD.characterCodeSet2String[b[8]];
                                         byte expectedPacketNumber = 0;
                                         //                                        IEnumerable<byte> text = Enumerable.Empty<byte>();
                                         List<byte> text = new List<byte>();
@@ -777,13 +795,13 @@ namespace DiscChanger.Models
                                             expectedPacketNumber++; b = ReadPacket(); l = b.Length;
                                         }
                                         while (!error);                                       
-                                        Disc.Text td = new Disc.Text();
+                                        DiscDVD.Text td = new DiscDVD.Text();
                                         string msg = "TEXT_DATA: " + discNumber;
 
                                         var textArray = text.ToArray();
                                         if (textArray.Length > 0)
                                         {
-                                            td.Language = Disc.languageCode2String[(ushort)((b[6] << 8) | b[7])];
+                                            td.Language = DiscDVD.languageCode2String[(ushort)((b[6] << 8) | b[7])];
                                             td.TextString = (characterSet == "ISO-8859" ? iso_8859_1 : System.Text.Encoding.
                                                 ASCII).GetString(textArray);
                                             msg += ":" + td.Language + "," + characterSet + ":" + td.TextString;
@@ -866,7 +884,7 @@ namespace DiscChanger.Models
                                             if (newDisc == null )
                                             {
                                                 newDiscNumber = discNumber;
-                                                newDisc = new Disc();
+                                                newDisc = new DiscDVD();
                                                 _timer.Change(TimeSpan.FromSeconds(15), Timeout.InfiniteTimeSpan);
                                             }
 
@@ -1059,6 +1077,11 @@ namespace DiscChanger.Models
         {
             return command != "open";
         }
+
+        internal override Type getDiscType()
+        {
+            return typeof(DiscDVD);
+        }
     }
     public class DiscChangerBD : DiscChangerModel
     {
@@ -1066,6 +1089,11 @@ namespace DiscChanger.Models
         public override bool SupportsCommand(string command)
         {
             return true;
+        }
+
+        internal override Type getDiscType()
+        {
+            return typeof(DiscBD);
         }
     }
 }
