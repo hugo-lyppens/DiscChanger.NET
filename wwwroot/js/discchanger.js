@@ -26,12 +26,11 @@ const otherPlayerControls = ["previous", "next", "rev_scan", "fwd_scan", "time_t
 const allPlayerControls = mainPlayerControls.concat(otherPlayerControls);
 
 function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc) {
-//	console.log(Date.now(), 'updateControls', changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc);
     var isOff = (status == "off");
     var suffix = '_' + changer;
 	var item;
     for(item of allPlayerControls) {
-        var buttonElement = document.getElementById(item + suffix).parentElement;
+        var buttonElement = document.getElementById(item + suffix);
         var b = isOff || buttonElement.dataset.disabled;
         buttonElement.disabled = b;
     }
@@ -216,7 +215,7 @@ function dt(key, slot, chapterTrackNumber) {
 }
 
 function toggle_config() {
-    var on = document.getElementById("edit").classList.toggle('btn-power-on');
+    var on = document.getElementById("edit").classList.toggle('btn-active');
     document.querySelectorAll('.config').forEach(function (e) { e.hidden = !on; });
     document.querySelectorAll('.hide-on-config').forEach(function (e) { e.hidden = on; });
 }
