@@ -342,3 +342,4 @@ healthchecksdb
 /wwwroot/Discs/MusicBrainz
 /wwwroot/DiscChangers.json
 /private
+*.old

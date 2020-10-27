@@ -39,13 +39,14 @@ button.config
     color: red;
 }
 
-.btn-power-on {
-    color: red;
-}
-
 .btn-power {
     color: LightGrey;
 }
+
+.btn-power.btn-power-on {
+    color: red;
+}
+
 
 #discs-table {
     display: grid;

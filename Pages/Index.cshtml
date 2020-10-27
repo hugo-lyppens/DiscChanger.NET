@@ -18,7 +18,7 @@
         
         <div class="boxed">
             <div>
-            <button class="btn btn-settings" onclick="toggle_config()"><i id="edit" title="Toggle access to settings" class="fas fa-cogs fa-lg"></i></button>
+            <button id="edit" class="btn btn-settings" onclick="toggle_config()"><i title="Toggle access to settings" class="fas fa-cogs fa-lg"></i></button>
             </div><div>
             <input type="range" title="Disc Display Size (@(discDisplaySize)rem)" min="10" max="50" id="disc_display_size" onchange="change_display_size(this)" class="disc-display-size-slider" value="@discDisplaySize" />
             </div>
@@ -49,19 +49,19 @@
                                 <td class="changer-name" id="name_@key" title="Click to scroll current disc into view" onclick="scroll_into_view('@key')">@name</td>
                                 <td>
                                     <div id="controls_@key" style="display:@controlsDisplay;">
-                                        <button class="btn btn-power" title="Toggle disc changer power" onclick="control('@key','power')"><i id="power_@key" class="fas fa-power-off fa-lg"></i></button>
-                                        <button class="btn" @Html.Raw(dc.SupportsCommand("open") ? "title=\"Open/Close door\"" : "title=\"Unsupported on " + changerType + ": Open/Close door\" data-disabled=\"true\"") onclick="control('@key','open')"><i id="open_@key" class="fas fa-door-open fa-lg"></i></button>
-                                        <button class="btn" title="Previous track" onclick="control('@key','previous')"><i id="previous_@key" class="fas fa-fast-backward fa-lg"></i></button>
-                                        <button class="btn" title="Next track" onclick="control('@key','next')"><i id="next_@key" class="fas fa-fast-forward fa-lg"></i></button>
-                                        <button class="btn" title="Reverse scan" onclick="control('@key','rev_scan')"><i id="rev_scan_@key" class="fas fa-backward fa-lg"></i></button>
-                                        <button class="btn" title="Forward scan" onclick="control('@key','fwd_scan')"><i id="fwd_scan_@key" class="fas fa-forward fa-lg"></i></button>
-                                        <button class="btn" title="Play" onclick="control('@key','play')"><i id="play_@key" class="far fa-play-circle fa-lg"></i></button>
-                                        <button class="btn" title="Pause" onclick="control('@key','pause')"><i id="pause_@key" class="far fa-pause-circle fa-lg"></i></button>
-                                        <button class="btn" title="Stop" onclick="control('@key','stop')"><i id="stop_@key" class="far fa-stop-circle fa-lg"></i></button>
-                                        <button class="btn" title="Time/Text" onclick="control('@key','time_text')"><i id="time_text_@key" class="fas fa-remove-format fa-lg"></i></button>
-                                        <button class="btn" title="Toggle all discs vs. one disc" onclick="control('@key','discs')"><i id="discs_@key" class="fas fa-compact-disc fa-lg"></i></button>
-                                        <button class="btn" title="Prompt to start scanning given set of discs" onclick="scan('@key',&quot;@name&quot;)"><i id="scan_@key" class="fas fa-coins fa-lg"></i></button>
-                                        <button class="btn" title="Prompt for set of discs to delete" onclick="deleteDiscs('@key',&quot;@name&quot;)"><i id="delete-discs_@key" class="fas fa-minus-circle fa-lg"></i></button>
+                                        <button id="power_@key" class="btn btn-power" title="Toggle disc changer power" onclick="control('@key','power')"><i class="fas fa-power-off fa-lg"></i></button>
+                                        <button id="open_@key" class="btn" @Html.Raw(dc.SupportsCommand("open") ? "title=\"Open/Close door\"" : "title=\"Unsupported on " + changerType + ": Open/Close door\" data-disabled=\"true\"") onclick="control('@key','open')"><i class="fas fa-door-open fa-lg"></i></button>
+                                        <button id="previous_@key" class="btn" title="Previous track" onclick="control('@key','previous')"><i class="fas fa-fast-backward fa-lg"></i></button>
+                                        <button id="next_@key" class="btn" title="Next track" onclick="control('@key','next')"><i class="fas fa-fast-forward fa-lg"></i></button>
+                                        <button id="rev_scan_@key" class="btn" title="Reverse scan" onclick="control('@key','rev_scan')"><i class="fas fa-backward fa-lg"></i></button>
+                                        <button id="fwd_scan_@key" class="btn" title="Forward scan" onclick="control('@key','fwd_scan')"><i class="fas fa-forward fa-lg"></i></button>
+                                        <button id="play_@key" class="btn" title="Play" onclick="control('@key','play')"><i class="far fa-play-circle fa-lg"></i></button>
+                                        <button id="pause_@key" class="btn" title="Pause" onclick="control('@key','pause')"><i class="far fa-pause-circle fa-lg"></i></button>
+                                        <button id="stop_@key" class="btn" title="Stop" onclick="control('@key','stop')"><i class="far fa-stop-circle fa-lg"></i></button>
+                                        <button id="time_text_@key" class="btn" title="Time/Text" onclick="control('@key','time_text')"><i class="fas fa-remove-format fa-lg"></i></button>
+                                        <button id="discs_@key" class="btn" title="Toggle all discs vs. one disc" onclick="control('@key','discs')"><i class="fas fa-compact-disc fa-lg"></i></button>
+                                        <button id="scan_@key" class="btn" title="Prompt to start scanning given set of discs" onclick="scan('@key',&quot;@name&quot;)"><i class="fas fa-coins fa-lg"></i></button>
+                                        <button id="delete-discs_@key" class="btn" title="Prompt for set of discs to delete" onclick="deleteDiscs('@key',&quot;@name&quot;)"><i class="fas fa-minus-circle fa-lg"></i></button>
                                     </div>
                                     <div id="scan-controls_@key" style="display:@scanControlsDisplay;">
                                         <input readonly title="Disc Scan Status" id="scan-status_@key" size="24" value="@scanStatusString" />
@@ -77,16 +77,16 @@
                                     </fieldset>
                                 </td>
                                 <td hidden class="config">
-                                    <a hidden asp-page="DiscChanger" asp-route-key="@dc.Key" title="Go to changer config page" class="config"><button class="btn config" type="button"><i id="edit_@key" class="fas fa-cog fa-lg"></i></button></a>
-                                    <button class="btn config" type="button" title="Delete disc changer" onclick="return deleteChanger(&quot;@key&quot;)"><i id="delete_@key" class="fas fa-trash-alt fa-lg"></i></button>
+                                    <a hidden asp-page="DiscChanger" asp-route-key="@dc.Key" title="Go to changer config page" class="config"><button id="edit_@key" class="btn config" type="button"><i class="fas fa-cog fa-lg"></i></button></a>
+                                    <button id="delete_@key" class="btn config" type="button" title="Delete disc changer" onclick="return deleteChanger(&quot;@key&quot;)"><i class="fas fa-trash-alt fa-lg"></i></button>
                                     @if (dci > 0)
                                                 {
                                             //asp-route-op="up"
-                                    <button class="btn config" type="button" title="Move changer up one position" onclick="moveChanger(&quot;@key&quot;,-1)"><i id="up_@key" class="fas fa-sort-up fa-lg"></i></button>
+                                    <button id="up_@key" class="btn config" type="button" title="Move changer up one position" onclick="moveChanger(&quot;@key&quot;,-1)"><i class="fas fa-sort-up fa-lg"></i></button>
                                         }
                                     @if (dci < discChangerCount - 1)
                                         {
-                                    <button class="btn config" type="button" title="Move changer down one position" onclick="moveChanger(&quot;@key&quot;,1)"><i id="down_@key" class="fas fa-sort-down fa-lg"></i></button>
+                                    <button id="down_@key" class="btn config" type="button" title="Move changer down one position" onclick="moveChanger(&quot;@key&quot;,1)"><i class="fas fa-sort-down fa-lg"></i></button>
                                         }
                                 </td>
                             </tr>
