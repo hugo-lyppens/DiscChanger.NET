@@ -81,13 +81,13 @@ namespace DiscChanger.Models
                 }
             }
             writer.WritePropertyName("DiscList");
-            Disc[] dl = new Disc[discChanger.Discs.Count];
+            object[] dl = new Disc[discChanger.Discs.Count];
             int i = 0;
             foreach (var kvp in discChanger.Discs)
             {
                 dl[i++]=kvp.Value;
             }
-            Array.Sort(dl, (x, y) => x.CompareTo(y));
+            Array.Sort(dl, (x, y) => ((Disc)x).CompareTo((Disc)y));
             JsonSerializer.Serialize(writer, dl, options);
             writer.WriteEndObject();
         }

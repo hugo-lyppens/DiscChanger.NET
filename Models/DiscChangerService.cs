@@ -68,17 +68,17 @@ namespace DiscChanger.Models
             DiscChangers = File.Exists(discChangersJsonFileName) ? JsonSerializer.Deserialize<List<DiscChangerModel>>(File.ReadAllBytes(discChangersJsonFileName)) : new List<DiscChangerModel>();
             //using (var f = File.Create(@"C:\Temp\dc.json"))
             //{
-            //    var discs = DiscChangers[2].Discs;
-            //    for(int i=0;i<55;i++)
-            //    {
-            //        string oldSlot = (345 + i).ToString();
-            //        string newSlot = (290 + i).ToString();
-            //        if(discs.TryRemove(oldSlot, out Disc d))
-            //        {
-            //            d.Slot = newSlot;
-            //            discs[newSlot] = d;
-            //        }
-            //    }
+            //    //var discs = DiscChangers[2].Discs;
+            //    //for (int i = 0; i < 55; i++)
+            //    //{
+            //    //    string oldSlot = (345 + i).ToString();
+            //    //    string newSlot = (290 + i).ToString();
+            //    //    if (discs.TryRemove(oldSlot, out Disc d))
+            //    //    {
+            //    //        d.Slot = newSlot;
+            //    //        discs[newSlot] = d;
+            //    //    }
+            //    //}
             //    var w = new Utf8JsonWriter(f, new JsonWriterOptions { Indented = true });
             //    JsonSerializer.Serialize(w, DiscChangers, new JsonSerializerOptions { IgnoreNullValues = true });
             //    f.Close();
