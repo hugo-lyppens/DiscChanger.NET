@@ -77,8 +77,8 @@
                                     </fieldset>
                                 </td>
                                 <td hidden class="config">
-                                    <a hidden asp-page="DiscChanger" asp-route-key="@dc.Key" title="Go to changer config page" class="config"><button id="edit_@key" class="btn config" type="button"><i class="fas fa-cog fa-lg"></i></button></a>
-                                    <button id="delete_@key" class="btn config" type="button" title="Delete disc changer" onclick="return deleteChanger(&quot;@key&quot;)"><i class="fas fa-trash-alt fa-lg"></i></button>
+                                    <a hidden asp-page="DiscChanger" asp-route-key="@key" title="Go to changer config page" class="config"><button id="edit_@key" class="btn config" type="button"><i class="fas fa-cog fa-lg"></i></button></a>
+                                    <button id="delete_@key" class="btn config" type="button" title="Delete disc changer" onclick="return deleteChanger('@key',&quot;@name&quot;)"><i class="fas fa-trash-alt fa-lg"></i></button>
                                     @if (dci > 0)
                                                 {
                                             //asp-route-op="up"
