@@ -165,7 +165,7 @@ namespace DiscChanger.Models
                     data.Lengths = lengths;
                     data.DiscID = disc?.Id;
                     data.QueryTOC = queryTOCArray;
-                    int? trackCount = d.DiscData.TrackCount();
+                    int? trackCount = (d as DiscSony)?.DiscData?.TrackCount();
                     var rm = releases.Select(r =>
                     {
                         var m_discs = r.Media?.Where(m => m.Discs != null && m.Discs.Any());

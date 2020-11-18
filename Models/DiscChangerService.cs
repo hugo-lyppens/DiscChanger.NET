@@ -255,9 +255,6 @@ namespace DiscChanger.Models
             DiscChangerModel dc = DiscChangerModel.Create(type);
             try
             {
-                dc.Type = type;
-                dc.ReverseDiscExistBytes = (type == DiscChangerService.BDP_CX7000ES);
-                dc.AdjustLastTrackLength = true;//This appears to be necessary for both CX777ES and CX7000ES.
                 dc.Connection = connection;
                 dc.CommandMode = commandMode;
                 dc.PortName = portName;
@@ -289,8 +286,6 @@ namespace DiscChanger.Models
                     key = keyBase + i.ToString();
                 }
                 DiscChangerModel dc = DiscChangerModel.Create(type);dc.Key = key;
-                dc.ReverseDiscExistBytes = (type == DiscChangerService.BDP_CX7000ES);
-                dc.AdjustLastTrackLength = true;//This appears to be necessary for both CX777ES and CX7000ES.
                 Update(dc, name, type, connection, commandMode, portName, HardwareFlowControl);
                 DiscChangers.Add(dc);
                 key2DiscChanger[key] = dc;
@@ -337,7 +332,7 @@ namespace DiscChanger.Models
         {
             return key2DiscChanger[changerKey];
         }
-        private int executionCount=0;
+
         public bool needsSaving = false;
 
         //private void DoWork(object state)

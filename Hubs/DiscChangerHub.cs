@@ -50,7 +50,7 @@ namespace DiscChanger.Hubs
         {
             try
             {
-                discChangerService.Changer(changerKey).DiscDirect(discNumber, titleAlbumNumber, chapterTrackNumber);
+                ((DiscChangerSony)(discChangerService.Changer(changerKey))).DiscDirect(discNumber, titleAlbumNumber, chapterTrackNumber);
             }
             catch (Exception e)
             {
