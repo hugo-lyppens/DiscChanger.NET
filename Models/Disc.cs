@@ -28,9 +28,10 @@ using System.Web;
 namespace DiscChanger.Models
 {
     //    public class Disc : IHostedService, IDisposable
-    public abstract class Disc : IEquatable<Disc>
+    public abstract class Disc
     {
-        public Disc(string slot) { Slot = slot; }
+        protected Disc() {}
+        protected Disc(string slot) { Slot = slot; }
         public static Comparer<string> SlotComparer = Comparer<string>.Create((s1, s2) =>
         {
             if (Int32.TryParse(s1, out int v1) && Int32.TryParse(s2, out int v2))
@@ -50,7 +51,7 @@ namespace DiscChanger.Models
         public MusicBrainz.Data LookupData;
         public string Slot { get; set; }
         public DiscChangerModel DiscChanger;
-        public System.DateTime DateTimeAdded;
+        public System.DateTime? DateTimeAdded { get; set; }
 
 
         internal int CompareTo(Disc other)
@@ -63,11 +64,7 @@ namespace DiscChanger.Models
         public virtual void Clear() { Slot = null; LookupData = null; }
         public override bool Equals(object obj)
         {
-            return Equals(obj as Disc);
-        }
-        public bool Equals(Disc other)
-        {
-            return other != null && this.Slot == other.Slot;
+            return obj is Disc other && this.Slot == other.Slot;
         }
         public override int GetHashCode()
         {
@@ -111,7 +108,7 @@ namespace DiscChanger.Models
             return DiscTypeNone;
         }
         public abstract IEnumerable<MusicBrainz.Track> getTracks();
-        public virtual string toHtml(string artRelPath)
+        public virtual string toHtml()
         {
             var afn = LookupData?.ArtFileName;
             var slotHtml = HtmlEncode(Slot ?? "--");
@@ -122,9 +119,9 @@ namespace DiscChanger.Models
             sb.Append(HtmlEncode(getDiscType() ?? "-"));
             sb.Append("</span></div>");
 
-            if (afn != null && artRelPath != null)
+            if (afn != null )
             {
-                sb.Append("<img src = \""); sb.Append(artRelPath); sb.Append('/'); sb.Append(HttpUtility.UrlEncode(afn)); sb.Append(@"""/>");
+                sb.Append("<img src = \""); sb.Append(LookupData.ArtRelPath); sb.Append('/'); sb.Append(HttpUtility.UrlEncode(afn)); sb.Append(@"""/>");
             }
             sb.Append(@"<div class=""artist"">");
             string a = getArtist();
@@ -172,7 +169,7 @@ namespace DiscChanger.Models
             return sb.ToString();
         }
 
-        internal virtual bool isComplete()
+        internal virtual bool hasBroadcastData()
         {
             return false;
         }
@@ -180,7 +177,8 @@ namespace DiscChanger.Models
 
     public abstract class DiscSony : Disc
     {
-        public DiscSony(string slot): base(slot) { }
+        protected DiscSony(){}
+        protected DiscSony(string slot) : base(slot) { }
 
         static public readonly Dictionary<byte, string> discType2String = new Dictionary<byte, string> {
             {(byte)0x00, DiscTypeNone },
@@ -329,11 +327,7 @@ namespace DiscChanger.Models
         //        public virtual bool HasAll() { return DiscData != null && TableOfContents != null; }
         public override bool Equals(object obj)
         {
-            return Equals(obj as DiscSony);
-        }
-        public bool Equals(DiscSony other)
-        {
-            return other != null && this.DiscData == other.DiscData && this.TableOfContents == other.TableOfContents;
+            return obj is DiscSony other && base.Equals(other) && this.DiscData == other.DiscData && this.TableOfContents == other.TableOfContents;
         }
         public override int GetHashCode()
         {
@@ -355,28 +349,7 @@ namespace DiscChanger.Models
             }
             return null;
         }
-        public static bool operator ==(DiscSony lhs, DiscSony rhs)
-        {
-            // Check for null on left side.
-            if (Object.ReferenceEquals(lhs, null))
-            {
-                if (Object.ReferenceEquals(rhs, null))
-                {
-                    // null == null = true.
-                    return true;
-                }
 
-                // Only the left side is null.
-                return false;
-            }
-            // Equals handles case of null on right side.
-            return lhs.Equals(rhs);
-        }
-
-        public static bool operator !=(DiscSony lhs, DiscSony rhs)
-        {
-            return !(lhs == rhs);
-        }
         public override IEnumerable<MusicBrainz.Track> getTracks()
         {
             IEnumerable<MusicBrainz.Track> tracks;
@@ -397,7 +370,7 @@ namespace DiscChanger.Models
             return tracks;
         }
 
-        internal override bool isComplete()
+        internal override bool hasBroadcastData()
         {
             return this.DiscData?.DiscType == DiscTypeNone;
         }
@@ -406,6 +379,8 @@ namespace DiscChanger.Models
 
     public class DiscSonyDVD : DiscSony
     {
+        public DiscSonyDVD() { }
+
         public DiscSonyDVD(string slot):base( slot){}
 
         static public readonly Dictionary<ushort, string> languageCode2String = new Dictionary<ushort, string> {
@@ -444,28 +419,6 @@ namespace DiscChanger.Models
             {
                 return HashCode.Combine(Language, TextString);
             }
-            public static bool operator ==(Text lhs, Text rhs)
-            {
-                // Check for null on left side.
-                if (Object.ReferenceEquals(lhs, null))
-                {
-                    if (Object.ReferenceEquals(rhs, null))
-                    {
-                        // null == null = true.
-                        return true;
-                    }
-
-                    // Only the left side is null.
-                    return false;
-                }
-                // Equals handles case of null on right side.
-                return lhs.Equals(rhs);
-            }
-
-            public static bool operator !=(Text lhs, Text rhs)
-            {
-                return !(lhs == rhs);
-            }
         }
 
         public Text DiscText { get; set; }
@@ -473,11 +426,7 @@ namespace DiscChanger.Models
 //        public override bool HasAll() { return base.HasAll() && (DiscText != null/*||!(DiscData.HasMemo||DiscData.HasText)*/); }
         public override bool Equals(object obj)
         {
-            return Equals(obj as DiscSonyDVD);
-        }
-        public bool Equals(DiscSonyDVD other)
-        {
-            return other != null && base.Equals( other ) && this.DiscText == other.DiscText;
+            return obj is DiscSonyDVD other  && base.Equals(other) && this.DiscText == other.DiscText;
         }
         public override int GetHashCode()
         {
@@ -489,77 +438,20 @@ namespace DiscChanger.Models
             return base.getTitle()??(DiscText?.TextString != null ? "CD-TEXT: " + DiscText.TextString : null);
         }
 
-        internal override bool isComplete()
+        internal override bool hasBroadcastData()
         {
-            return (DiscData != null && DiscText != null && (TableOfContents != null || DiscData.DiscType.Contains("SACD"))) || base.isComplete();
+            return (DiscData != null &&
+                    (TableOfContents != null || (DiscData.DiscType != "DVD" && DiscData.DiscType != "CD")) &&
+                    (DiscText != null || (DiscData.DiscType != "DVD" && DiscData.DiscType != "CD" && !DiscData.DiscType.StartsWith("SACD"))))
+                    || base.hasBroadcastData();
         }
 
-        //public override string toHtml(string artRelPath)
-        //    {
-        //        var afn = LookupData?.ArtFileName;
-        //        var slotHtml = HtmlEncode(Slot ?? "--");
-        //        StringBuilder sb = new StringBuilder(@"<div class=""disc"" data-changer=""", 8192);
-        //        sb.Append(DiscChanger.Key); sb.Append(@""" data-slot= """); sb.Append(slotHtml); sb.Append(@"""><div class=""disc-header""><span class=""slot"">");
-        //        sb.Append(HtmlEncode(DiscChanger.Name)); sb.Append(':'); sb.Append(slotHtml);
-        //        sb.Append(@"</span><span class=""disc-type"">");
-        //        sb.Append(HtmlEncode(DiscData?.DiscType ?? "-"));
-        //        sb.Append("</span></div>");
-
-        //        if (afn != null && artRelPath != null)
-        //        {
-        //            sb.Append("<img src = \""); sb.Append(artRelPath); sb.Append('/'); sb.Append(HttpUtility.UrlEncode(afn)); sb.Append(@"""/>");
-        //        }
-        //        sb.Append(@"<div class=""artist"">");
-        //        string a = LookupData?.Artist;
-        //        if (a != null)
-        //            sb.Append(HtmlEncode(a));
-        //        sb.Append(@"</div><div class=""title"">");
-        //        string t = LookupData?.Title ?? (DiscText?.TextString != null ? "CD-TEXT: " + DiscText.TextString : null);
-        //        if (t != null)
-        //            sb.Append(HtmlEncode(t));
-        //        sb.Append(@"</div>");
-        //        sb.Append(@"<div class=""data"" style=""display:none"">");
-        //        var tracks = LookupData?.Tracks;
-        //        if (tracks == null && DiscData != null && DiscData.TrackCount() != null)
-        //            tracks = Enumerable.Range(this.DiscData.StartTrackTitleAlbum.Value, DiscData.TrackCount().Value).Select(i => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = i; return t; }).ToArray();
-        //        if (tracks != null)
-        //        {
-        //            sb.Append(@"<table class=""tracks"">");
-        //            foreach (var track in tracks)
-        //            {
-        //                sb.Append(@"<tr onclick = ""dt('");
-        //                sb.Append(DiscChanger.Key); sb.Append("',");
-        //                sb.Append(slotHtml); sb.Append(',');
-        //                sb.Append(track.Position);
-        //                sb.Append(@")""><td>");
-        //                sb.Append(track.Position);
-        //                sb.Append(@"</td><td>"); sb.Append(HtmlEncode(track.Title ?? "---")); sb.Append("</td><td>");
-        //                sb.Append(track.Length?.ToString(@"h\:mm\:ss") ?? "--");
-        //                sb.Append(@"</td></tr>");
-        //            }
-        //            sb.Append(@"</table>");
-        //        }
-        //        if (LookupData != null)
-        //        {
-        //            sb.Append(@"<div class=""urls"">");
-        //            var urls = LookupData?.URLs;
-        //            if (urls != null)
-        //                foreach (var url in urls)
-        //                {
-        //                    sb.Append(@"<a href = """); sb.Append(url); sb.Append(@""" target = ""_blank""></a>");
-        //                }
-        //            sb.Append(@"<a class=""diag"" href = """); sb.Append(LookupData.diagURL()); sb.Append(@""" target = ""_blank""></a>");
-        //            sb.Append(@"</div>");
-        //        }
-
-        //        sb.Append(@"</div>");
-        //        sb.Append(@"</div>");
-        //        return sb.ToString();
-        //    }
     }
 
     public class DiscSonyBD : DiscSony
     {
+        public DiscSonyBD() { }
+
         public DiscSonyBD(string slot) : base(slot) { }
 
         enum discInfoDataType { AlbumTitleOrDiscName=0, TrackOrTitleName, AlbumOrDiscGenre, TrackOrTitleGenre };
@@ -614,6 +506,14 @@ namespace DiscChanger.Models
 
                 public int Number { get; set; }
                 public string Name { get; set; }
+                public static bool operator==(TrackOrTitle t1, TrackOrTitle t2)
+                {
+                    return t1.Equals(t2);
+                }
+                public static bool operator!=(TrackOrTitle t1, TrackOrTitle t2)
+                {
+                    return !t1.Equals(t2);
+                }
             }
             public List<TrackOrTitle> TracksOrTitles { get; set; }
 
@@ -635,6 +535,29 @@ namespace DiscChanger.Models
             {
                 return HashCode.Combine(base.GetHashCode(), AlbumOrDiscGenre, AlbumTitleOrDiscName, DiscTypeString, StructuralComparisons.StructuralEqualityComparer.GetHashCode(TracksOrTitles));
             }
+            public static bool operator ==(Information lhs, Information rhs)
+            {
+                // Check for null on left side.
+                if (Object.ReferenceEquals(lhs, null))
+                {
+                    if (Object.ReferenceEquals(rhs, null))
+                    {
+                        // null == null = true.
+                        return true;
+                    }
+
+                    // Only the left side is null.
+                    return false;
+                }
+                // Equals handles case of null on right side.
+                return lhs.Equals(rhs);
+            }
+
+            public static bool operator !=(Information lhs, Information rhs)
+            {
+                return !(lhs == rhs);
+            }
+
         }
 
         public Information DiscInformation { get; set; }
@@ -658,22 +581,40 @@ namespace DiscChanger.Models
             {
                 return HashCode.Combine(base.GetHashCode(), GraceNoteDiscID, StructuralComparisons.StructuralEqualityComparer.GetHashCode(AACSDiscID));
             }
+            public static bool operator ==(IDData lhs, IDData rhs)
+            {
+                // Check for null on left side.
+                if (Object.ReferenceEquals(lhs, null))
+                {
+                    if (Object.ReferenceEquals(rhs, null))
+                    {
+                        // null == null = true.
+                        return true;
+                    }
+
+                    // Only the left side is null.
+                    return false;
+                }
+                // Equals handles case of null on right side.
+                return lhs.Equals(rhs);
+            }
+
+            public static bool operator !=(IDData lhs, IDData rhs)
+            {
+                return !(lhs == rhs);
+            }
         }
         public IDData DiscIDData { get; set; }
 
-        public override void Clear() { DiscInformation = null; base.Clear(); }
+        public override void Clear() { DiscInformation = null; DiscIDData = null; base.Clear(); }
 //        public override bool HasAll() { return base.HasAll() && (DiscInformation != null/*||!(DiscData.HasMemo||DiscData.HasText)*/); }
         public override bool Equals(object obj)
         {
-            return Equals(obj as DiscSonyBD);
-        }
-        public bool Equals(DiscSonyBD other)
-        {
-            return other != null && base.Equals(other) && this.DiscInformation == other.DiscInformation;
+            return obj is DiscSonyBD other && base.Equals(other) && this.DiscInformation == other.DiscInformation && this.DiscIDData == other.DiscIDData;
         }
         public override int GetHashCode()
         {
-            return HashCode.Combine(base.GetHashCode(), DiscInformation);
+            return HashCode.Combine(base.GetHashCode(), DiscInformation, DiscIDData);
         }
         public override string getTitle()
         {
@@ -690,7 +631,7 @@ namespace DiscChanger.Models
                 {
                     var tf = TableOfContents?.TitleFrames;
                     if (tf != null && tf.TryGetValue("CD", out int[] framesList) && framesList.Length >= tracksOrTitles.Count)
-                        tracks = Enumerable.Zip(tracksOrTitles, framesList, (trkOrTitle, frames) => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = trkOrTitle.Number; t.Title = trkOrTitle.Name; t.Length = new TimeSpan(((long)frames * 10000L) / 75L); return t; }).ToArray();
+                        tracks = Enumerable.Zip(tracksOrTitles, framesList, (trkOrTitle, frames) => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = trkOrTitle.Number; t.Title = trkOrTitle.Name; t.Length = new TimeSpan(((long)frames * 10000000L) / 75L); return t; }).ToArray();
                     else
                         tracks = tracksOrTitles.Select(trkOrTitle => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = trkOrTitle.Number; t.Title = trkOrTitle.Name; return t; });
                 }
@@ -698,78 +639,12 @@ namespace DiscChanger.Models
             return tracks??base.getTracks();
         }
 
-        internal override bool isComplete()
+        internal override bool hasBroadcastData()
         {
             return (DiscData != null && 
                     (TableOfContents != null || (DiscData.DiscType!="DVD"&&DiscData.DiscType!="CD")) &&
-                    (DiscIDData!=null&&DiscInformation!=null||(DiscData.DiscType!="DVD" && DiscData.DiscType != "CD" && DiscData.DiscType != "BD")))
-                    || base.isComplete();
+                    (DiscInformation!=null||(DiscData.DiscType!="DVD" && DiscData.DiscType != "CD" && DiscData.DiscType != "BD")))
+                    || base.hasBroadcastData();
         }
-
-        //public override string toHtml(string artRelPath)
-        //{
-        //    var afn = LookupData?.ArtFileName;
-        //    var slotHtml = HtmlEncode(Slot ?? "--");
-        //    StringBuilder sb = new StringBuilder(@"<div class=""disc"" data-changer=""", 8192);
-        //    sb.Append(DiscChanger.Key); sb.Append(@""" data-slot= """); sb.Append(slotHtml); sb.Append(@"""><div class=""disc-header""><span class=""slot"">");
-        //    sb.Append(HtmlEncode(DiscChanger.Name)); sb.Append(':'); sb.Append(slotHtml);
-        //    sb.Append(@"</span><span class=""disc-type"">");
-        //    sb.Append(HtmlEncode(DiscData?.DiscType ?? "-"));
-        //    sb.Append("</span></div>");
-
-        //    if (afn != null && artRelPath != null)
-        //    {
-        //        sb.Append("<img src = \""); sb.Append(artRelPath); sb.Append('/'); sb.Append(HttpUtility.UrlEncode(afn)); sb.Append(@"""/>");
-        //    }
-        //    sb.Append(@"<div class=""artist"">");
-        //    string a = LookupData?.Artist;
-        //    if (a != null)
-        //        sb.Append(HtmlEncode(a));
-        //    sb.Append(@"</div><div class=""title"">");
-        //    string t = LookupData?.Title ?? (DiscInformation?.AlbumTitleOrDiscName);
-        //    if (t != null)
-        //        sb.Append(HtmlEncode(t));
-        //    sb.Append(@"</div>");
-        //    sb.Append(@"<div class=""data"" style=""display:none"">");
-        //    var tracks = LookupData?.Tracks;
-        //    if (tracks == null && DiscData != null && DiscData.TrackCount() != null)
-        //        tracks = Enumerable.Range(this.DiscData.StartTrackTitleAlbum.Value, DiscData.TrackCount().Value).Select(i => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = i; return t; }).ToArray();
-        //    if (tracks == null && DiscData != null && DiscData.TrackCount() != null)
-        //        tracks = Enumerable.Range(this.DiscData.StartTrackTitleAlbum.Value, DiscData.TrackCount().Value).Select(i => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = i; return t; }).ToArray();
-        //    if (tracks != null)
-        //    {
-        //        sb.Append(@"<table class=""tracks"">");
-        //        foreach (var track in tracks)
-        //        {
-        //            sb.Append(@"<tr onclick = ""dt('");
-        //            sb.Append(DiscChanger.Key); sb.Append("',");
-        //            sb.Append(slotHtml); sb.Append(',');
-        //            sb.Append(track.Position);
-        //            sb.Append(@")""><td>");
-        //            sb.Append(track.Position);
-        //            sb.Append(@"</td><td>"); sb.Append(HtmlEncode(track.Title ?? "---")); sb.Append("</td><td>");
-        //            sb.Append(track.Length?.ToString(@"h\:mm\:ss") ?? "--");
-        //            sb.Append(@"</td></tr>");
-        //        }
-        //        sb.Append(@"</table>");
-        //    }
-        //    if (LookupData != null)
-        //    {
-        //        sb.Append(@"<div class=""urls"">");
-        //        var urls = LookupData?.URLs;
-        //        if (urls != null)
-        //            foreach (var url in urls)
-        //            {
-        //                sb.Append(@"<a href = """); sb.Append(url); sb.Append(@""" target = ""_blank""></a>");
-        //            }
-        //        sb.Append(@"<a class=""diag"" href = """); sb.Append(LookupData.diagURL()); sb.Append(@""" target = ""_blank""></a>");
-        //        sb.Append(@"</div>");
-        //    }
-
-        //    sb.Append(@"</div>");
-        //    sb.Append(@"</div>");
-        //    return sb.ToString();
-        //}
     }
-
 }

@@ -43,12 +43,11 @@ namespace DiscChanger.Models
         public const string DVP_CX777ES = "Sony DVP-CX777ES";
         public const string BDP_CX7000ES = "Sony BDP-CX7000ES";
         public static readonly string[] ChangerTypes = new string[] { String.Empty, DVP_CX777ES, BDP_CX7000ES };
-        public static readonly string[] CommandModes = new string[] { "BD1", "BD2", "BD3" };
 
         private Dictionary<string, DiscChangerModel> key2DiscChanger;
 
         private readonly ILogger<DiscChangerService> _logger;
-        private Timer _timer;
+
         private readonly IHubContext<DiscChangerHub> _hubContext;
         private string webRootPath, discChangersJsonFileName, discsPath, discsRelPath;
         BlockingCollection<Disc> discDataMessages = new BlockingCollection<Disc>();
@@ -177,14 +176,14 @@ namespace DiscChanger.Models
                             {
                                 MusicBrainz.Data mbd = discLookup.Lookup(d);
                                 d.LookupData = mbd;
-                                d.DateTimeAdded = DateTime.Now;
+                                d.DateTimeAdded ??= DateTime.Now;
                                 dc.Discs[d.Slot] = d;
                                 needsSaving = true;
 
                                 _hubContext.Clients.All.SendAsync("DiscData",
                                        dc.Key,
                                        d.Slot,
-                                       d.toHtml(discLookup.musicBrainzArtRelPath));
+                                       d.toHtml());
                             }
                             catch(Exception e)
                             {
@@ -363,7 +362,6 @@ namespace DiscChanger.Models
             if(DiscChangers!=null)
                 foreach (var dc in this.DiscChangers)
                     dc.Disconnect();
-            _timer?.Dispose();
         }
     }
 }

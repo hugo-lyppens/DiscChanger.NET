@@ -83,6 +83,7 @@ namespace DiscChanger.Models
             {
                 return "https://musicbrainz.org/ws/2/discid/" + (DiscID ?? "-") + "?toc=" + String.Join('+', QueryTOC);
             }
+            public string ArtRelPath;
         }
 
         private ConcurrentDictionary<string, Data> discs = new ConcurrentDictionary<string, Data>();
@@ -101,7 +102,7 @@ namespace DiscChanger.Models
             foreach( var name in Directory.GetFiles( musicBrainzPath, "*.json")) 
             {
                 Data d = JsonSerializer.Deserialize<Data>(File.ReadAllText(Path.Combine(musicBrainzPath, name)));
-
+                d.ArtRelPath = musicBrainzArtRelPath;
                 string baseName = Path.GetFileNameWithoutExtension(name);
                 discs[baseName] = d;
                 lengths2Name[d.Lengths] = baseName;
@@ -162,6 +163,7 @@ namespace DiscChanger.Models
                     MB.Interfaces.Entities.IDisc disc = result.Disc;
                     IReadOnlyList<MB.Interfaces.Entities.IRelease> releases = disc != null ? disc.Releases : result.Releases;
                     Data data = new Data();
+                    data.ArtRelPath = musicBrainzArtRelPath;
                     data.Lengths = lengths;
                     data.DiscID = disc?.Id;
                     data.QueryTOC = queryTOCArray;

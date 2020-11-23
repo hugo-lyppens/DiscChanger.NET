@@ -50,7 +50,9 @@ namespace DiscChanger.Hubs
         {
             try
             {
-                ((DiscChangerSony)(discChangerService.Changer(changerKey))).DiscDirect(discNumber, titleAlbumNumber, chapterTrackNumber);
+                if(!((DiscChangerSony)(discChangerService.Changer(changerKey))).DiscDirect(discNumber, titleAlbumNumber, chapterTrackNumber))
+                    System.Diagnostics.Debug.WriteLine("False return from DiscDirect " + changerKey + '/' + Convert.ToString(discNumber) + '/' + Convert.ToString(titleAlbumNumber) + '/' + Convert.ToString(chapterTrackNumber));
+
             }
             catch (Exception e)
             {

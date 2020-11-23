@@ -74,7 +74,7 @@ namespace DiscChanger.Pages
                     Connection = DiscChangerService.CONNECTION_SERIAL_PORT;
                     ConnectionTypes = new string[] { DiscChangerService.CONNECTION_SERIAL_PORT }; break;
                 case DiscChangerService.BDP_CX7000ES:
-                    CommandMode ??= DiscChangerService.CommandModes[0];  
+                    CommandMode ??= DiscChangerSonyBD.CommandModes[0];  
                     Connection ??= DiscChangerService.CONNECTION_SERIAL_PORT;
                     ConnectionTypes = new string[] { DiscChangerService.CONNECTION_SERIAL_PORT/*, "IP"*/ }; break;
             }

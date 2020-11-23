@@ -82,7 +82,7 @@ function updateDisc(newChanger, newSlot, discHtml) {
             if (changerIndex == newChangerIndex) {
                 var slot = ds.slot;
                 if (slot > newSlot) { element = discElement; position = 'beforebegin'; break; }
-                if (slot == newSlot) { discElement.popover('dispose');discElement.remove(); continue; }
+                if (slot == newSlot) { $(discElement).popover('dispose');discElement.remove(); continue; }
             }
             i++;
         }
