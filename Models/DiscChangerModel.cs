@@ -1128,9 +1128,11 @@ namespace DiscChanger.Models
     }
     public class DiscChangerSonyBD : DiscChangerSony
     {
-        public static readonly Dictionary<string, byte> CommandMode2PDC = new Dictionary<string, byte> { { "BD1", (byte)0x80 }, { "BD2", (byte)0x81 }, { "BD3", (byte)0x82 } };
-        public static readonly Dictionary<string, byte> CommandMode2ResponsePDC = new Dictionary<string, byte> { { "BD1", (byte)0x88 }, { "BD2", (byte)0x89 }, { "BD3", (byte)0x8A } };
+        //public static readonly Dictionary<string, byte> CommandMode2PDC = new Dictionary<string, byte> { { "BD1", (byte)0x80 }, { "BD2", (byte)0x81 }, { "BD3", (byte)0x82 } };
+        //public static readonly Dictionary<string, byte> CommandMode2ResponsePDC = new Dictionary<string, byte> { { "BD1", (byte)0x88 }, { "BD2", (byte)0x89 }, { "BD3", (byte)0x8A } };
         public static readonly string[] CommandModes = new string[] { "BD1", "BD2", "BD3" };
+        public static readonly Dictionary<string, byte> CommandMode2PDC = new Dictionary<string, byte>(Enumerable.Zip(CommandModes, Enumerable.Range(0x80, CommandModes.Length), (m, pdc) => new KeyValuePair<string, byte>(m, (byte)pdc)));
+        public static readonly Dictionary<string, byte> CommandMode2ResponsePDC = new Dictionary<string, byte>(Enumerable.Zip(CommandModes, Enumerable.Range(0x88, CommandModes.Length), (m, pdc) => new KeyValuePair<string, byte>(m, (byte)pdc)));
 
         public DiscChangerSonyBD(string type)
         {
