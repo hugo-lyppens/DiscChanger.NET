@@ -1161,29 +1161,36 @@ namespace DiscChanger.Models
             return new DiscSonyBD(slot);
         }
 
-        byte[] ReadIDResponse()
+        byte[] ReadIDResponse(int desiredDiscNumber, DiscSonyBD.IDData.DataType desiredDataType, byte[] initialPacket = null)
         {
             int? discNumber;
-            byte dataType;
+            DiscSonyBD.IDData.DataType dataType;
             List<byte> data = null;
             byte[] b;
             int l;
+            int packetCounter = 0;
             do
             {
-                b = ReadNextPacketOfType(0x8E);
+                b = (packetCounter==0&&initialPacket!=null)?initialPacket:ReadNextPacketOfType(0x8E);
                 if (b == null)
                     return null;
                 System.Diagnostics.Debug.WriteLine($"Received raw data {GetBytesToString(b)}");
                 l = b.Length;
                 discNumber = FromBCD(b[2], b[3]);
-                dataType = b[4];
+                if( !discNumber.HasValue||discNumber.Value!=desiredDiscNumber)
+                    throw new Exception($"Received Disc ID response disc number {discNumber} instead of {desiredDiscNumber}");
+                dataType = (DiscSonyBD.IDData.DataType)b[4];
+                if (dataType != desiredDataType)
+                    throw new Exception($"Received Disc ID response data type {dataType} instead of {desiredDataType}");
                 int length = (b[5] << 24) | (b[6] << 16) | (b[7] << 8) | b[8];//FromBCD(b[5], b[6]);
                 int packetNumber = (b[9] << 8) | b[10];//FromBCD(b[5], b[6]);
                 System.Diagnostics.Debug.WriteLine($"Received raw data {discNumber} {dataType} {packetNumber} {length}");
+                if (packetCounter != packetNumber)
+                    throw new Exception($"ID Data packet out of sequence {packetNumber} instead of {packetCounter}");
                 if (data == null)
                     data = new List<byte>(length);
                 const int metaDataOffset = 11;
-                data.AddRange(b.Skip(metaDataOffset).Take(l - (metaDataOffset + 1)));
+                data.AddRange(b.Skip(metaDataOffset).Take(l - (metaDataOffset + 1)));packetCounter++;
             } while (b[l - 1] == 0xcc);
             var dataArray = data.ToArray();
             System.Diagnostics.Debug.WriteLine($"Received ID response {discNumber} {dataType} {GetBytesToString(dataArray)}");
@@ -1194,15 +1201,14 @@ namespace DiscChanger.Models
         internal override bool processPacket(byte[] b)
         {
             byte cmd = b[1];
+            DiscSonyBD newDiscBD = newDisc as DiscSonyBD;
             switch (cmd)
             {
                 case 0x8D://DISC_INFORMATION
                     string s = parseDiscInformationPacket(b, out int? discNumber, out string discTypeString, out int titleTrackNumber, out DiscSonyBD.Information.DataType dataType);
-
-                    if (discNumber.HasValue)
+                    if (discNumber.HasValue && !String.IsNullOrEmpty(s))
                     {
                         string discNumberString = discNumber.Value.ToString();
-                        DiscSonyBD newDiscBD = newDisc as DiscSonyBD;
                         if (newDiscBD == null) throw new Exception("Not processing new disc");
                         if (newDisc.Slot != discNumberString) throw new Exception("Slot mismatch ");
                         if (dataType != DiscSonyBD.Information.DataType.AlbumTitleOrDiscName) throw new Exception($"Unexpected data type {dataType}");
@@ -1216,7 +1222,22 @@ namespace DiscChanger.Models
                     }
                     return true;
                 case 0x8E://ID_DATA
-                    throw new Exception("Unprompted ID_DATA");
+                    if (newDiscBD == null) throw new Exception("Not processing new disc");
+                    DiscSonyBD.IDData.DataType idDataType = (DiscSonyBD.IDData.DataType)b[4];
+                    var id = ReadIDResponse(Int32.Parse(newDiscBD.Slot), idDataType, b);
+                    if (id != null)
+                    {
+                        DiscSonyBD.IDData idData = newDiscBD.DiscIDData ?? new DiscSonyBD.IDData();
+                        switch (idDataType)
+                        {
+                            case DiscSonyBD.IDData.DataType.GraceNoteDiscID: idData.GraceNoteDiscID = Encoding.UTF8.GetString(id); break;
+                            case DiscSonyBD.IDData.DataType.AACSDiscID: idData.AACSDiscID = id; break;
+                            default:
+                                throw new Exception($"Unrecognized DiscID data type: {idDataType}");
+                        }
+                        newDiscBD.DiscIDData = idData;
+                    }
+                    return true;
                 default:
                     return base.processPacket(b);
             }
@@ -1232,7 +1253,7 @@ namespace DiscChanger.Models
             const int metaDataOffset = 9;
             var i = Array.IndexOf(b, (byte)0, metaDataOffset);
             var count = i != -1 ? i - metaDataOffset : b.Length - metaDataOffset;
-            return Encoding.UTF8.GetString(b, metaDataOffset, count);
+            return count > 0 ?Encoding.UTF8.GetString(b, metaDataOffset, count):null;
         }
         private string retrieveDiscInformation(DiscSonyBD.Information.DataType dataType, int track)
         {
@@ -1268,7 +1289,7 @@ namespace DiscChanger.Models
                 return;
             }
             di.AlbumOrDiscGenre = retrieveDiscInformation(DiscSonyBD.Information.DataType.AlbumOrDiscGenre, 0);
-
+            int discNumber = Int32.Parse(newDiscBD.Slot);
             if (di.DiscTypeString == "CDDA")
             {
                 di.TracksOrTitles = new List<DiscSonyBD.Information.TrackOrTitle>(newDiscBD.DiscData.TrackCount().Value);
@@ -1277,15 +1298,18 @@ namespace DiscChanger.Models
                     di.TracksOrTitles.Add(new DiscSonyBD.Information.TrackOrTitle(track, retrieveDiscInformation(DiscSonyBD.Information.DataType.TrackOrTitleName, track)));
                 }
             }
-            SendCommand(new byte[] { PDC, 0x8E, 0, 0, 1 });
-            byte[] b = ReadIDResponse();
-            var id = new DiscSonyBD.IDData();
-            if (b != null)
-                id.GraceNoteDiscID = System.Text.Encoding.UTF8.GetString(b);
-            if (di.DiscTypeString == "BD-ROM")
+            var id = newDiscBD.DiscIDData ?? new DiscSonyBD.IDData();
+            if (id.GraceNoteDiscID == null)
             {
-                SendCommand(new byte[] { PDC, 0x8E, 0, 0, 2 });
-                id.AACSDiscID = ReadIDResponse();
+                SendCommand(new byte[] { PDC, 0x8E, 0, 0, (byte)DiscSonyBD.IDData.DataType.GraceNoteDiscID });
+                byte[] b = ReadIDResponse(discNumber, DiscSonyBD.IDData.DataType.GraceNoteDiscID);
+                if (b != null)
+                    id.GraceNoteDiscID = System.Text.Encoding.UTF8.GetString(b);
+            }
+            if (di.DiscTypeString == "BD-ROM" && id.AACSDiscID==null)
+            {
+                SendCommand(new byte[] { PDC, 0x8E, 0, 0, (byte)DiscSonyBD.IDData.DataType.AACSDiscID });
+                id.AACSDiscID = ReadIDResponse(discNumber, DiscSonyBD.IDData.DataType.AACSDiscID);
             }
             newDiscBD.DiscIDData = id;
         }

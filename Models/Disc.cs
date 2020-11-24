@@ -396,11 +396,7 @@ namespace DiscChanger.Models
 
         public class Text : IEquatable<Text>
         {
-            //            public int? DiscNumber { get; set; }
-            //            public int? titleTrackNumber { get; set; }
-            //            public byte type { get; set; }
             public string Language { get; set; }
-            //            public string CharacterSet { get; set; }
             public string TextString { get; set; }
 
             public override bool Equals(object obj)
@@ -419,6 +415,29 @@ namespace DiscChanger.Models
             {
                 return HashCode.Combine(Language, TextString);
             }
+            public static bool operator ==(Text lhs, Text rhs)
+            {
+                // Check for null on left side.
+                if (Object.ReferenceEquals(lhs, null))
+                {
+                    if (Object.ReferenceEquals(rhs, null))
+                    {
+                        // null == null = true.
+                        return true;
+                    }
+
+                    // Only the left side is null.
+                    return false;
+                }
+                // Equals handles case of null on right side.
+                return lhs.Equals(rhs);
+            }
+
+            public static bool operator !=(Text lhs, Text rhs)
+            {
+                return !(lhs == rhs);
+            }
+
         }
 
         public Text DiscText { get; set; }
@@ -563,6 +582,8 @@ namespace DiscChanger.Models
         public Information DiscInformation { get; set; }
         public class IDData : IEquatable<IDData>
         {
+            public enum DataType : byte { GraceNoteDiscID=1, AACSDiscID=2 };
+
             public string GraceNoteDiscID { get; set; }
             public byte[] AACSDiscID { get; set; }
             public override bool Equals(object obj)
