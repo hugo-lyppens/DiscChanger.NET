@@ -39,7 +39,7 @@ namespace DiscChanger.Hubs
         {
             try
             {
-                discChangerService.Changer(changerKey).Control(command);
+                await discChangerService.Changer(changerKey).Control(command);
             }
             catch (Exception e)
             {
@@ -50,7 +50,9 @@ namespace DiscChanger.Hubs
         {
             try
             {
-                if(!((DiscChangerSony)(discChangerService.Changer(changerKey))).DiscDirect(discNumber, titleAlbumNumber, chapterTrackNumber))
+                var dcs = (DiscChangerSony)(discChangerService.Changer(changerKey));
+                bool b = await dcs.DiscDirect(discNumber, titleAlbumNumber, chapterTrackNumber);
+                if (!b)
                     System.Diagnostics.Debug.WriteLine("False return from DiscDirect " + changerKey + '/' + Convert.ToString(discNumber) + '/' + Convert.ToString(titleAlbumNumber) + '/' + Convert.ToString(chapterTrackNumber));
 
             }

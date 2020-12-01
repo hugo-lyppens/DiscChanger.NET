@@ -132,6 +132,7 @@ namespace DiscChanger.Models
             discLookup = new MusicBrainz(Path.Combine(discsPath, "MusicBrainz"), discsRelPath+"/MusicBrainz");
 
             key2DiscChanger = new Dictionary<string, DiscChangerModel>(DiscChangers.Count);
+            List<Task> connectTasks = new List<Task>(DiscChangers.Count);
             foreach (var discChanger in DiscChangers)
             {
                 key2DiscChanger[discChanger.Key] = discChanger;
@@ -142,7 +143,7 @@ namespace DiscChanger.Models
                 }
                 try
                 {
-                    discChanger.Connect(this, _hubContext, _logger);
+                    connectTasks.Add(discChanger.Connect(this, _hubContext, _logger));
                 }
                 catch(Exception e)
                 {
@@ -156,8 +157,7 @@ namespace DiscChanger.Models
                                    null);
                 }
             }
-            //_timer = new Timer(DoWork, null, TimeSpan.Zero,
-            //    TimeSpan.FromSeconds(5));
+            Task.WaitAll(connectTasks.ToArray());
             _logger.LogInformation("Hosted service starting");
 
             await Task.Factory.StartNew(async () =>
@@ -180,7 +180,7 @@ namespace DiscChanger.Models
                                 dc.Discs[d.Slot] = d;
                                 needsSaving = true;
 
-                                _hubContext.Clients.All.SendAsync("DiscData",
+                                await _hubContext.Clients.All.SendAsync("DiscData",
                                        dc.Key,
                                        d.Slot,
                                        d.toHtml());
@@ -258,7 +258,7 @@ namespace DiscChanger.Models
                 dc.CommandMode = commandMode;
                 dc.PortName = portName;
                 dc.HardwareFlowControl = HardwareFlowControl;
-                dc.Connect(null, null, _logger);
+                await dc.Connect(null, null, _logger);
                 return await dc.Test();
             }
             catch (Exception e)

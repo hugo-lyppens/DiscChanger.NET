@@ -100,7 +100,7 @@ namespace DiscChanger.Models
             public int? Count;
         }
         public ScanStatus currentScanStatus;
-        public abstract bool LoadDisc(int disc);
+        public abstract Task<bool> LoadDisc(int disc);
         public async Task Scan(string discSet)
         {
             try
@@ -126,7 +126,7 @@ namespace DiscChanger.Models
                         System.Diagnostics.Debug.WriteLine($"Continuing because {disc} <= {discNumber}");
                         continue;
                     }
-                    if (!LoadDisc(disc))
+                    if (!await LoadDisc(disc))
                     {
                         System.Diagnostics.Debug.WriteLine($"Continuing because LoadDisc false {disc}");
                         continue;
@@ -271,8 +271,8 @@ namespace DiscChanger.Models
 
         
 
-        public abstract void Connect();
-        public abstract void Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger);
+        public abstract Task Connect();
+        public abstract Task Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger);
 
         protected virtual void Dispose(bool disposing)
         {
@@ -301,7 +301,8 @@ namespace DiscChanger.Models
         public bool AdjustLastTrackLength { get; set; } = true;
         public bool ReverseDiscExistBytes { get; set; } = false;
 
-        BlockingCollection<byte[]> responses = new BlockingCollection<byte[]>();
+        //BlockingCollection<byte[]> responses = new BlockingCollection<byte[]>();
+        BufferBlock<byte[]> responses = new BufferBlock<byte[]>();
 
         protected byte PDC = 0xD0;
         protected byte ResponsePDC = 0xD8;
@@ -341,6 +342,7 @@ namespace DiscChanger.Models
     0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
 };
         protected virtual void retrieveNonBroadcastData() { }
+        protected static TimeSpan CommandTimeOut = new TimeSpan(0,0,10);//10 seconds
         internal override BitArray getDiscsPresent()
         {
             byte[] discExistBitReq = new byte[] { PDC, 0x8C };
@@ -349,8 +351,7 @@ namespace DiscChanger.Models
             byte[] b; byte count = 0;
             do
             {
-                if (!this.responses.TryTake(out b, 10000))
-                    break;
+                b = responses.Receive(CommandTimeOut);
                 var l = b.Length;
                 if (l > 2)
                 {
@@ -409,9 +410,9 @@ namespace DiscChanger.Models
             return toSetString(discToDeleteBitArray);
         }
 
-        public override bool LoadDisc(int disc)
+        public override async Task<bool> LoadDisc(int disc)
         {
-            return DiscDirect(disc, null, null, 0x01);
+            return await DiscDirect(disc, null, null, 0x01);
         }
 
         internal override async Task<string> Test()
@@ -479,7 +480,7 @@ namespace DiscChanger.Models
                 if (clearSerial)
                 {
                     serialPort.DiscardInBuffer();
-                    while (responses.TryTake(out _)) { }
+                    responses.TryReceiveAll(out IList<byte[]> _);
                 }
                 int l = command.Length;
                 byte[] header = new byte[2] { 2, (byte)l };
@@ -522,7 +523,7 @@ namespace DiscChanger.Models
                     return null; // BD player recognized the request but cannot execute it
                 found = b[0] == ResponsePDC && b.Length >= 2 && b[1] == cmd;
                 if (!found && !processPacket(b))
-                    this.responses.Add(b);
+                    responses.Post(b);
             }
             while (!found);
             return b;
@@ -535,7 +536,7 @@ namespace DiscChanger.Models
                 byte[] b = ReadByteOrPacket();
                 if (b.Length > 1)
                     return b;
-                this.responses.Add(b);
+                responses.Post(b);
             }
         }
 
@@ -546,12 +547,7 @@ namespace DiscChanger.Models
             byte[] b; int count = 0;
             do
             {
-                if (!this.responses.TryTake(out b, 2000))
-                {
-                    string err = "Timout waiting for response packet from " + GetBytesToString(command);
-                    System.Diagnostics.Debug.WriteLine(err);
-                    throw new Exception(err);
-                }
+                b = responses.Receive(CommandTimeOut);
                 count++;
             }
             while ((b.Length < 2 || b[0] != this.ResponsePDC || b[1] != command[1]) && count < 10);
@@ -563,17 +559,13 @@ namespace DiscChanger.Models
             }
             return b;
         }
-        private bool ProcessAckCommand(byte[] command)
+        private async Task<bool> ProcessAckCommand(byte[] command)
         {
             SendCommand(command);
             byte[] b; int count = 0;
             do
             {
-                if (!this.responses.TryTake(out b, 15000))
-                {
-                    System.Diagnostics.Debug.WriteLine("Timout waiting for ACK/NACK from " + GetBytesToString(command));
-                    throw new Exception("Timout waiting for ACK/NACK from " + GetBytesToString(command));
-                }
+                b = await responses.ReceiveAsync(CommandTimeOut);
                 count++;
             }
             while (b.Length != 1 && count < 10);
@@ -587,9 +579,9 @@ namespace DiscChanger.Models
             System.Diagnostics.Debug.WriteLine("Received unexpected response from " + GetBytesToString(command) + ": " + GetBytesToString(b));
             throw new Exception("Received unexpected response from " + GetBytesToString(command) + ": " + GetBytesToString(b));
         }
-        private bool ProcessAckCommand(byte command)
+        private async Task<bool> ProcessAckCommand(byte command)
         {
-            return ProcessAckCommand(new byte[] { PDC, command });
+            return await ProcessAckCommand(new byte[] { PDC, command });
         }
         static readonly byte ACK = 0xFD;
         static readonly byte NACK = 0xFE;
@@ -706,13 +698,13 @@ namespace DiscChanger.Models
                         b = ReadByteOrPacket();
                         if (b.Length == 1)
                         {
-                            this.responses.Add(b); continue;
+                            responses.Post(b); continue;
                         }
                         System.Diagnostics.Debug.WriteLine($"{btr}->{sp.BytesToRead} Packet Received.");
                         if (b[0] == ResponsePDC )
                         {
                             if (!processPacket(b))
-                                this.responses.Add(b);
+                                responses.Post(b);
                             else if (newDisc != null && newDisc.hasBroadcastData())
                             {
                                 b = null;
@@ -728,7 +720,7 @@ namespace DiscChanger.Models
                                             break;
                                         }
                                         if (!processPacket(b))
-                                            this.responses.Add(b);
+                                            responses.Post(b);
                                         b = null;
                                     }
                                 }
@@ -753,7 +745,7 @@ namespace DiscChanger.Models
                                     if (b[0] != ResponsePDC)
                                         throw new Exception($"Unrecognized ResponsePDC {b[0]}");
                                     if (!processPacket(b))
-                                        this.responses.Add(b);
+                                        responses.Post(b);
                                 }
                             }
                         }
@@ -915,16 +907,17 @@ namespace DiscChanger.Models
             }
         }
 
-        public override void Connect()
+        public override async Task Connect()
         {
             OpenSerial();
             try
             {
-                ProcessAckCommand(new byte[] { PDC, 0x62, 0x02 });
+                await ProcessAckCommand(new byte[] { PDC, 0x62, 0x02 });
                 SendCommand(new byte[] { PDC, 0x82 });
             }
             catch { }
         }
+        static protected TimeSpan PowerTimeSpan = new TimeSpan(0, 0, 0, 0, 200);
         public override async Task<string> Control(string command)
         {
             if (command.StartsWith("power"))
@@ -938,24 +931,25 @@ namespace DiscChanger.Models
                 bool success = false;
                 System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
                 string r = null;
+                
                 for (i = 0; !success && i < iterations; i++)
                 {
                     SendCommand(powerCommand, i == 0);
                     sw.Start();
-                    if (responses.TryTake(out byte[] response, 200))
-                    {
-                        while (response.Length > 1)
+                    try {
+                        byte[] response = await responses.ReceiveAsync(PowerTimeSpan);
+                        if (response.Length > 1&&responses.TryReceiveAll(out IList<byte[]> l))
                         {
-                            System.Diagnostics.Debug.WriteLine(command + " attempt: " + i + ", skipping large response packet:" + GetBytesToString(response));
-                            if (!responses.TryTake(out response))
-                                break;
+                            System.Diagnostics.Debug.WriteLine($"{command} attempt: {i}, skipping large response packet & got {l.Count} packets" );
+                            response = l.First(p => p.Length == 1);
                         }
                         if (response.Length == 1)
                         {
                             success = true; r = ack2String[response[0]];
                         }
-                        while (!success) ;
                     }
+                    catch(InvalidOperationException) { }
+                    catch(TimeoutException) { }
                     sw.Stop();
                     System.Diagnostics.Debug.WriteLine(command + " attempt: " + i + ", ms:" + sw.ElapsedMilliseconds);
                 }
@@ -970,7 +964,7 @@ namespace DiscChanger.Models
                     {
                         try
                         {
-                            ack = ProcessAckCommand(new byte[] { PDC, 0x62, 0x02 });
+                            ack = await ProcessAckCommand(new byte[] { PDC, 0x62, 0x02 });
                             await Task.Delay(2000);
                         }
                         catch { }
@@ -984,10 +978,11 @@ namespace DiscChanger.Models
             else
             {
                 byte commandCode = commandString2Code[command];
-                return ProcessAckCommand(commandCode) ? "ACK" : "NACK";
+                bool b = await ProcessAckCommand(commandCode);
+                return b ? "ACK" : "NACK";
             }
         }
-        public bool DiscDirect(int? discNumber, int? titleAlbumNumber, int? chapterTrackNumber, byte control = 0x00)
+        public async Task<bool> DiscDirect(int? discNumber, int? titleAlbumNumber, int? chapterTrackNumber, byte control = 0x00)
         {
             ToBCD(discNumber ?? 0, out byte discNumberH, out byte discNumberL);
             byte trackTitleNumberH, trackTitleNumberL;
@@ -1004,7 +999,7 @@ namespace DiscChanger.Models
             }
             //            byte control = pause? 0x01:0x00;//Play, 0x01 for pause
             var discDirectSetCommand = new byte[] { PDC, 0x4A, discNumberH, discNumberL, trackTitleNumberH, trackTitleNumberL, chapterNumberH, chapterNumberL, control };
-            return ProcessAckCommand(discDirectSetCommand);
+            return await ProcessAckCommand(discDirectSetCommand);
         }
     }
 
@@ -1020,14 +1015,14 @@ namespace DiscChanger.Models
         {
             return command != "open";
         }
-        public override void Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger)
+        public override async Task Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger)
         {
             this.logger = logger;
             this.hubContext = hubContext;
             this.discChangerService = discChangerService;
             PDC = (byte)0xD0;
             ResponsePDC = (byte)0xD8;
-            Connect();
+            await Connect();
         }
 
         internal override Type getDiscType()
@@ -1098,22 +1093,35 @@ namespace DiscChanger.Models
                         {
                             newDiscDVD.DiscText = td;
                             var dd = newDiscDVD.DiscData;
-                            if ( dd!=null&&dd.DiscType.StartsWith("SACD")&&newDiscDVD.TableOfContents==null&&
+                            if ( dd!=null&&dd.DiscType.StartsWith("SACD")&&
                                 Discs.TryGetValue(discNumberString, out Disc existingDisc)&&
                                 existingDisc is DiscSonyDVD existingDiscDVD &&
                                 existingDiscDVD.DiscData != null &&
-                                existingDiscDVD.TableOfContents != null &&
-                                existingDiscDVD.DiscData.DiscType.StartsWith("SACD")&&
-                                existingDiscDVD.DiscText==td&&
-                                existingDiscDVD.DiscData.TrackCount()==dd.TrackCount())
+                                existingDiscDVD.DiscData.DiscType.StartsWith("SACD"))
                             {
-                                newDiscDVD.DateTimeAdded   = existingDiscDVD.DateTimeAdded; //preserve datetime from existing
-                                newDiscDVD.TableOfContents = existingDiscDVD.TableOfContents;
+                                if (newDiscDVD.TableOfContents != null)
+                                {
+                                    if((existingDiscDVD.TableOfContents==null|| existingDiscDVD.TableOfContents==newDiscDVD.TableOfContents)&&
+                                       String.IsNullOrEmpty(newDiscDVD.DiscText.TextString) && !String.IsNullOrEmpty(existingDiscDVD.DiscText.TextString))
+                                    {
+                                        newDiscDVD.DateTimeAdded = existingDiscDVD.DateTimeAdded; //preserve datetime from existing
+                                        newDiscDVD.DiscText = existingDiscDVD.DiscText;
+                                    }
+                                }
+                                else
+                                {
+                                    if (existingDiscDVD.TableOfContents != null && (String.IsNullOrEmpty(existingDiscDVD.DiscText.TextString) || existingDiscDVD.DiscText.TextString == newDiscDVD.DiscText.TextString))
+                                    {
+                                        newDiscDVD.DateTimeAdded   = existingDiscDVD.DateTimeAdded; //preserve datetime from existing
+                                        newDiscDVD.TableOfContents = existingDiscDVD.TableOfContents;
+                                    }
+                                }
                                 // preserve the table of contents perhaps captured while the player's
                                 // SACD/CD mode was set to CD as the table of contents is not accessible in
                                 // SACD mode.
+                                if (!String.IsNullOrEmpty(existingDiscDVD.DiscText?.TextString) && String.IsNullOrEmpty(td.TextString))
+                                    newDiscDVD.DiscText = existingDiscDVD.DiscText;
                             }
-
                         }
                         else
                         {
@@ -1144,14 +1152,14 @@ namespace DiscChanger.Models
         {
             return true;
         }
-        public override void Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger)
+        public override async Task Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger)
         {
             this.logger = logger;
             this.hubContext = hubContext;
             this.discChangerService = discChangerService;
             PDC = CommandMode2PDC[CommandMode];
             ResponsePDC = CommandMode2ResponsePDC[CommandMode];
-            Connect();
+            await Connect();
         }
 
         internal override Type getDiscType()
