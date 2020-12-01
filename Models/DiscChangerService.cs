@@ -43,12 +43,11 @@ namespace DiscChanger.Models
         public const string DVP_CX777ES = "Sony DVP-CX777ES";
         public const string BDP_CX7000ES = "Sony BDP-CX7000ES";
         public static readonly string[] ChangerTypes = new string[] { String.Empty, DVP_CX777ES, BDP_CX7000ES };
-        public static readonly string[] CommandModes = new string[] { "BD1", "BD2", "BD3" };
 
         private Dictionary<string, DiscChangerModel> key2DiscChanger;
 
         private readonly ILogger<DiscChangerService> _logger;
-        private Timer _timer;
+
         private readonly IHubContext<DiscChangerHub> _hubContext;
         private string webRootPath, discChangersJsonFileName, discsPath, discsRelPath;
         BlockingCollection<Disc> discDataMessages = new BlockingCollection<Disc>();
@@ -62,6 +61,44 @@ namespace DiscChanger.Models
             discsRelPath = "Discs";
             discsPath    = Path.Combine(webRootPath, discsRelPath );
         }
+        private void Load()
+        {
+            this._logger.LogInformation("Loading from " + discChangersJsonFileName);
+            DiscChangers = File.Exists(discChangersJsonFileName) ? JsonSerializer.Deserialize<List<DiscChangerModel>>(File.ReadAllBytes(discChangersJsonFileName)) : new List<DiscChangerModel>();
+            //using (var f = File.Create(@"C:\Temp\dc.json"))
+            //{
+            //    //var discs = DiscChangers[2].Discs;
+            //    //for (int i = 0; i < 55; i++)
+            //    //{
+            //    //    string oldSlot = (345 + i).ToString();
+            //    //    string newSlot = (290 + i).ToString();
+            //    //    if (discs.TryRemove(oldSlot, out Disc d))
+            //    //    {
+            //    //        d.Slot = newSlot;
+            //    //        discs[newSlot] = d;
+            //    //    }
+            //    //}
+            //    var w = new Utf8JsonWriter(f, new JsonWriterOptions { Indented = true });
+            //    JsonSerializer.Serialize(w, DiscChangers, new JsonSerializerOptions { IgnoreNullValues = true });
+            //    f.Close();
+            //}
+            needsSaving = false;
+        }
+        private void Save()
+        {
+            this._logger.LogInformation("Saving to " + discChangersJsonFileName);
+            lock (this.DiscChangers)
+            {
+                using (var f = File.Create(discChangersJsonFileName))
+                {
+                    var w = new Utf8JsonWriter(f, new JsonWriterOptions { Indented = true });
+                    JsonSerializer.Serialize(w, DiscChangers, new JsonSerializerOptions { IgnoreNullValues = true });
+                    f.Close();
+                    needsSaving = false;
+                }
+            }
+        }
+
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Timed Hosted Service running.");
@@ -89,29 +126,24 @@ namespace DiscChanger.Models
             //    f.Close();
             //    needsSaving = false;
             //}
+//            The following code registers the converter:
 
-            DiscChangers = File.Exists(discChangersJsonFileName) ? JsonSerializer.Deserialize<List<DiscChangerModel>>(File.ReadAllText(discChangersJsonFileName)) : new List<DiscChangerModel>();
+            Load();
             discLookup = new MusicBrainz(Path.Combine(discsPath, "MusicBrainz"), discsRelPath+"/MusicBrainz");
 
             key2DiscChanger = new Dictionary<string, DiscChangerModel>(DiscChangers.Count);
+            List<Task> connectTasks = new List<Task>(DiscChangers.Count);
             foreach (var discChanger in DiscChangers)
             {
-                var discs = new ConcurrentDictionary<string, Disc>();
-                if (discChanger.DiscList != null)
-                {
-                    foreach (var d in discChanger.DiscList)
-                    {
-                        d.DiscChanger = discChanger;
-                        d.LookupData = discLookup.Get(d);
-                        discs[d.Slot] = d;
-                    }
-                    discChanger.DiscList = null;
-                }
-                discChanger.Discs = discs;
                 key2DiscChanger[discChanger.Key] = discChanger;
+                foreach (var kvp in discChanger.Discs)
+                {
+                    Disc d = kvp.Value;
+                    d.LookupData = discLookup.Get(d);
+                }
                 try
                 {
-                    discChanger.Connect(this, _hubContext, _logger);
+                    connectTasks.Add(discChanger.Connect(this, _hubContext, _logger));
                 }
                 catch(Exception e)
                 {
@@ -125,8 +157,7 @@ namespace DiscChanger.Models
                                    null);
                 }
             }
-            //_timer = new Timer(DoWork, null, TimeSpan.Zero,
-            //    TimeSpan.FromSeconds(5));
+            Task.WaitAll(connectTasks.ToArray());
             _logger.LogInformation("Hosted service starting");
 
             await Task.Factory.StartNew(async () =>
@@ -145,14 +176,14 @@ namespace DiscChanger.Models
                             {
                                 MusicBrainz.Data mbd = discLookup.Lookup(d);
                                 d.LookupData = mbd;
-                                d.DateTimeAdded = DateTime.Now;
+                                d.DateTimeAdded ??= DateTime.Now;
                                 dc.Discs[d.Slot] = d;
                                 needsSaving = true;
 
-                                _hubContext.Clients.All.SendAsync("DiscData",
+                                await _hubContext.Clients.All.SendAsync("DiscData",
                                        dc.Key,
                                        d.Slot,
-                                       d.toHtml(discLookup.musicBrainzArtRelPath));
+                                       d.toHtml());
                             }
                             catch(Exception e)
                             {
@@ -191,15 +222,6 @@ namespace DiscChanger.Models
                 }
             }
         }
-        //internal void MoveDown(string key)
-        //{
-        //    Move(key, 1);
-        //}
-
-        //internal void MoveUp(string key)
-        //{
-        //    Move(key, -1);
-        //}
 
         internal void Delete(string key)
         {
@@ -214,52 +236,20 @@ namespace DiscChanger.Models
             }
         }
 
-        private void Save()
-        {
-            this._logger.LogInformation("Saving to " + discChangersJsonFileName);
-            lock (this.DiscChangers)
-            {
-                foreach (var discChanger in DiscChangers)
-                {
-                    if (discChanger.Discs != null)
-                    {
-                        List<Disc> dl = new List<Disc>(discChanger.Discs.Count);
-                        foreach (var kvp in discChanger.Discs)
-                        {
-                            dl.Add(kvp.Value);
-                        }
-                        discChanger.DiscList = dl.OrderBy(d => Int32.Parse(d.Slot)).ToList();
-                    }
-                }
-
-                using (var f = File.Create(discChangersJsonFileName))
-                {
-                    var w = new Utf8JsonWriter(f, new JsonWriterOptions { Indented = true });
-                    JsonSerializer.Serialize(w, DiscChangers);
-                    f.Close();
-                    needsSaving = false;
-                }
-                foreach (var discChanger in DiscChangers)
-                    discChanger.DiscList = null;
-            }
-        }
         internal async Task<string> Test(string key, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl)
         {
             DiscChangerModel d = null;
             bool b = key!=null&&key2DiscChanger.TryGetValue(key, out d) && connection == d.Connection && portName == d.PortName;
             if (b)
                 d.Disconnect();
-            DiscChangerModel dc = new DiscChangerModel();
+            DiscChangerModel dc = DiscChangerModel.Create(type);
             try
             {
-                dc.Type = type;
-                dc.ReverseDiscExistBytes = (type == DiscChangerService.BDP_CX7000ES);
-                dc.AdjustLastTrackLength = true;//This appears to be necessary for both CX777ES and CX7000ES.
                 dc.Connection = connection;
                 dc.CommandMode = commandMode;
                 dc.PortName = portName;
                 dc.HardwareFlowControl = HardwareFlowControl;
-                dc.Connect(null, null, _logger);
+                await dc.Connect(null, null, _logger);
                 return await dc.Test();
             }
             catch (Exception e)
@@ -270,7 +260,7 @@ namespace DiscChanger.Models
             {
                 dc.Disconnect();
                 if (b)
-                    d.Connect();
+                    await d.Connect();
             }
         }
         internal void Add(string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl)
@@ -285,9 +275,7 @@ namespace DiscChanger.Models
                     i++;
                     key = keyBase + i.ToString();
                 }
-                DiscChangerModel dc = new DiscChangerModel(key);
-                dc.ReverseDiscExistBytes = (type == DiscChangerService.BDP_CX7000ES);
-                dc.AdjustLastTrackLength = true;//This appears to be necessary for both CX777ES and CX7000ES.
+                DiscChangerModel dc = DiscChangerModel.Create(type);dc.Key = key;
                 Update(dc, name, type, connection, commandMode, portName, HardwareFlowControl);
                 DiscChangers.Add(dc);
                 key2DiscChanger[key] = dc;
@@ -334,7 +322,7 @@ namespace DiscChanger.Models
         {
             return key2DiscChanger[changerKey];
         }
-        private int executionCount=0;
+
         public bool needsSaving = false;
 
         //private void DoWork(object state)
@@ -365,7 +353,6 @@ namespace DiscChanger.Models
             if(DiscChangers!=null)
                 foreach (var dc in this.DiscChangers)
                     dc.Disconnect();
-            _timer?.Dispose();
         }
     }
 }

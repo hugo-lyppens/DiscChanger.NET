@@ -110,7 +110,6 @@
 </nav>
 <div class="discs" id="discs-table" style="grid-template-columns:repeat(auto-fill,minmax(@(discDisplaySize)rem,1fr))">
 @{
-    var artRelPath = dcs.discLookup.musicBrainzArtRelPath;
     for (int dci = 0; dci < discChangerCount; dci++)
     {
         Models.DiscChangerModel dc = dcs.DiscChangers[dci];
@@ -122,11 +121,11 @@
         if (discs != null) {
             lock (discs) {
                 var l = discs.ToList();
-                l.Sort(Models.DiscChangerModel.NumberTextComparer);
+                l.Sort(Models.Disc.SlotDiscPairComparer);
                 foreach (var kvp in l)
                 {
                     var d = kvp.Value;
-                    @Html.Raw(d.toHtml(artRelPath));
+                    @Html.Raw(d.toHtml());
                 }
             }
         }

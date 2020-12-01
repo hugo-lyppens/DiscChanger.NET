@@ -39,7 +39,7 @@ namespace DiscChanger.Hubs
         {
             try
             {
-                discChangerService.Changer(changerKey).Control(command);
+                await discChangerService.Changer(changerKey).Control(command);
             }
             catch (Exception e)
             {
@@ -50,25 +50,29 @@ namespace DiscChanger.Hubs
         {
             try
             {
-                discChangerService.Changer(changerKey).DiscDirect(discNumber, titleAlbumNumber, chapterTrackNumber);
+                var dcs = (DiscChangerSony)(discChangerService.Changer(changerKey));
+                bool b = await dcs.DiscDirect(discNumber, titleAlbumNumber, chapterTrackNumber);
+                if (!b)
+                    System.Diagnostics.Debug.WriteLine("False return from DiscDirect " + changerKey + '/' + Convert.ToString(discNumber) + '/' + Convert.ToString(titleAlbumNumber) + '/' + Convert.ToString(chapterTrackNumber));
+
             }
             catch (Exception e)
             {
                 System.Diagnostics.Debug.WriteLine("Exception from DiscDirect " + changerKey + '/' + Convert.ToString(discNumber) + '/' + Convert.ToString(titleAlbumNumber) + '/' + Convert.ToString(chapterTrackNumber) + ": "+e.Message);
             }
         }
-        public async Task Scan(string changerKey, string discSet)
+        public void Scan(string changerKey, string discSet)
         {
             try
             {
-                discChangerService.Changer(changerKey).Scan(discSet);
+                _ = discChangerService.Changer(changerKey).Scan(discSet);
             }
             catch (Exception e)
             {
                 System.Diagnostics.Debug.WriteLine("Exception from Scan " + changerKey + '/' + discSet + ": " + e.Message);
             }
         }
-        public async Task CancelScan(string changerKey)
+        public void CancelScan(string changerKey)
         {
             try
             {
@@ -112,13 +116,5 @@ namespace DiscChanger.Hubs
                 System.Diagnostics.Debug.WriteLine("Exception from Delete Changer " + changerKey + ": " + e.Message);
             }
         }
-        //public async Task SendMessage(string user, string message)
-        //{
-        //    await Clients.All.SendAsync("ReceiveMessage", user, message);
-        //}
-        //public async Task SendStatus(string changer, int discNumber, int titleAlbumNumber, int chapterTrackNumber, string status, int modeDisc )
-        //{
-        //    await Clients.All.SendAsync("StatusData", changer, discNumber, titleAlbumNumber, chapterTrackNumber, status, modeDisc);
-        //}
     }
 }

@@ -50,7 +50,7 @@ namespace System.Text.Json.Serialization
 
 		private static bool IsNullableTimeSpan(Type typeToConvert)
 		{
-			Type? UnderlyingType = Nullable.GetUnderlyingType(typeToConvert);
+			Type UnderlyingType = Nullable.GetUnderlyingType(typeToConvert);
 
 			return UnderlyingType != null && UnderlyingType == typeof(TimeSpan);
 		}

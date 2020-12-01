@@ -59,7 +59,7 @@
             {
                 <label asp-for="CommandMode">Command Mode</label>
                 @Html.DropDownListFor(m => m.CommandMode,
-                                           new SelectList(DiscChangerService.CommandModes))
+                                           new SelectList(DiscChangerSonyBD.CommandModes))
             }
             <button type="submit" name="op" value="Test">Test</button>
             <button type="submit" name="op" value="OK">OK</button>

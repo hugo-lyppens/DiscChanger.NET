@@ -74,7 +74,7 @@ namespace DiscChanger.Pages
                     Connection = DiscChangerService.CONNECTION_SERIAL_PORT;
                     ConnectionTypes = new string[] { DiscChangerService.CONNECTION_SERIAL_PORT }; break;
                 case DiscChangerService.BDP_CX7000ES:
-                    CommandMode ??= DiscChangerService.CommandModes[0];  
+                    CommandMode ??= DiscChangerSonyBD.CommandModes[0];  
                     Connection ??= DiscChangerService.CONNECTION_SERIAL_PORT;
                     ConnectionTypes = new string[] { DiscChangerService.CONNECTION_SERIAL_PORT/*, "IP"*/ }; break;
             }
@@ -85,9 +85,10 @@ namespace DiscChanger.Pages
                 SerialPortNames = Array.FindAll(SerialPort.GetPortNames(), p => discChangerService.DiscChangers.All(dc => dc == discChanger || dc.PortName != p));
             }
         }
-        public async Task<IActionResult> OnGetAsync()
+//        public async Task<IActionResult> OnGetAsync()
+        public IActionResult OnGet()
         {
-            if(Key!=null)
+            if (Key!=null)
                 updateModel(Key);
             return Page();
         }
