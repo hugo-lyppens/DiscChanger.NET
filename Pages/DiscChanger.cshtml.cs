@@ -85,9 +85,10 @@ namespace DiscChanger.Pages
                 SerialPortNames = Array.FindAll(SerialPort.GetPortNames(), p => discChangerService.DiscChangers.All(dc => dc == discChanger || dc.PortName != p));
             }
         }
-        public async Task<IActionResult> OnGetAsync()
+//        public async Task<IActionResult> OnGetAsync()
+        public IActionResult OnGet()
         {
-            if(Key!=null)
+            if (Key!=null)
                 updateModel(Key);
             return Page();
         }

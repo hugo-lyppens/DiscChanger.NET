@@ -499,17 +499,9 @@ namespace DiscChanger.Models
 
         public class Information : IEquatable<Information>
         {
-            //            public int? DiscNumber { get; set; }
-            //            public int? titleTrackNumber { get; set; }
-            //            public byte type { get; set; }
             public string DiscTypeString { get; set; }
             public string AlbumTitleOrDiscName { get; set; }
             public string AlbumOrDiscGenre { get; set; }
-            //            public string CharacterSet { get; set; }
-            //            "0x00 : Album Title(CDDA) / Disc Name (DVD and BD)
-            //0x01 : Track Name(CDDA) / Title Name(DVD and BD)
-            //0x02 : Album Genre(CDDA) / Disc Genre(DVD and BD)
-            //0x03 : Title Genre / Track Genre "							
 
             public enum DataType : byte { AlbumTitleOrDiscName, TrackOrTitleName, AlbumOrDiscGenre, TrackOrTitleGenre };
             public enum DiscType : byte { NoDisc=0x00, CDDA=0x01, DVD_ROM=0x03, BD_ROM=0x05, Unknown=0xff };
@@ -521,7 +513,11 @@ namespace DiscChanger.Models
                 { DiscSonyBD.Information.DiscType.Unknown, "Unknown" }
             };
 
+#pragma warning disable CS0660 // Type defines operator == or operator != but does not override Object.Equals(object o)
+#pragma warning disable CS0661 // Type defines operator == or operator != but does not override Object.GetHashCode()
             public struct TrackOrTitle
+#pragma warning restore CS0661 // Type defines operator == or operator != but does not override Object.GetHashCode()
+#pragma warning restore CS0660 // Type defines operator == or operator != but does not override Object.Equals(object o)
             {
                 public TrackOrTitle(int number, string name)
                 {

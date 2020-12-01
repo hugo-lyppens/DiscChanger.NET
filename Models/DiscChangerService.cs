@@ -260,7 +260,7 @@ namespace DiscChanger.Models
             {
                 dc.Disconnect();
                 if (b)
-                    d.Connect();
+                    await d.Connect();
             }
         }
         internal void Add(string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl)

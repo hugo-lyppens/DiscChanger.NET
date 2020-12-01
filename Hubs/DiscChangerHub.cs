@@ -61,18 +61,18 @@ namespace DiscChanger.Hubs
                 System.Diagnostics.Debug.WriteLine("Exception from DiscDirect " + changerKey + '/' + Convert.ToString(discNumber) + '/' + Convert.ToString(titleAlbumNumber) + '/' + Convert.ToString(chapterTrackNumber) + ": "+e.Message);
             }
         }
-        public async Task Scan(string changerKey, string discSet)
+        public void Scan(string changerKey, string discSet)
         {
             try
             {
-                discChangerService.Changer(changerKey).Scan(discSet);
+                _ = discChangerService.Changer(changerKey).Scan(discSet);
             }
             catch (Exception e)
             {
                 System.Diagnostics.Debug.WriteLine("Exception from Scan " + changerKey + '/' + discSet + ": " + e.Message);
             }
         }
-        public async Task CancelScan(string changerKey)
+        public void CancelScan(string changerKey)
         {
             try
             {
