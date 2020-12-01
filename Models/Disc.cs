@@ -24,6 +24,7 @@ using System.Collections;
 using System.Text;
 using static System.Web.HttpUtility;
 using System.Web;
+using System.Xml.Serialization;
 
 namespace DiscChanger.Models
 {
@@ -274,9 +275,14 @@ namespace DiscChanger.Models
 
         public class TOC : IEquatable<TOC>
         {
-
+            [XmlAttribute]
+            public string Source { get; set; }
             public string[] Titles { get; set; }
             public ConcurrentDictionary<string, int[]> TitleFrames { get; set; }
+            public TOC ShallowCopy()
+            {
+                return (TOC)MemberwiseClone();
+            }
 
             public override bool Equals(object obj)
             {

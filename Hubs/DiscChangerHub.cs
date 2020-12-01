@@ -116,13 +116,5 @@ namespace DiscChanger.Hubs
                 System.Diagnostics.Debug.WriteLine("Exception from Delete Changer " + changerKey + ": " + e.Message);
             }
         }
-        //public async Task SendMessage(string user, string message)
-        //{
-        //    await Clients.All.SendAsync("ReceiveMessage", user, message);
-        //}
-        //public async Task SendStatus(string changer, int discNumber, int titleAlbumNumber, int chapterTrackNumber, string status, int modeDisc )
-        //{
-        //    await Clients.All.SendAsync("StatusData", changer, discNumber, titleAlbumNumber, chapterTrackNumber, status, modeDisc);
-        //}
     }
 }

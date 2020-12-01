@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using DiscChanger.Models;
+using System;
 
 namespace DiscChanger
 {
@@ -31,7 +32,11 @@ namespace DiscChanger
             //});
             services.AddSingleton<DiscChangerService>();
             services.AddSingleton<IHostedService>(p => p.GetService<DiscChangerService>());
-            services.AddSignalR();
+            services.AddSignalR(hubOptions =>
+            {
+                hubOptions.EnableDetailedErrors = true;
+                hubOptions.ClientTimeoutInterval = TimeSpan.FromMinutes(6);
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

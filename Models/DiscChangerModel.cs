@@ -342,7 +342,8 @@ namespace DiscChanger.Models
     0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
 };
         protected virtual void retrieveNonBroadcastData() { }
-        protected static TimeSpan CommandTimeOut = new TimeSpan(0,0,10);//10 seconds
+        protected static TimeSpan CommandTimeOut = TimeSpan.FromSeconds(1);
+        protected static TimeSpan LongCommandTimeOut = TimeSpan.FromSeconds(10);
         internal override BitArray getDiscsPresent()
         {
             byte[] discExistBitReq = new byte[] { PDC, 0x8C };
@@ -351,7 +352,7 @@ namespace DiscChanger.Models
             byte[] b; byte count = 0;
             do
             {
-                b = responses.Receive(CommandTimeOut);
+                b = responses.Receive(LongCommandTimeOut);
                 var l = b.Length;
                 if (l > 2)
                 {
@@ -420,12 +421,12 @@ namespace DiscChanger.Models
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("Power OK: " + await Control("power_on"));
-            byte[] b = ProcessPacketCommand(new byte[] { PDC, 0xA0 });//Model_name_req
+            byte[] b = await ProcessPacketCommandAsync(new byte[] { PDC, 0xA0 });//Model_name_req
             var i = Array.IndexOf(b, (byte)0, 2);
             var count = i != -1 ? i - 2 : b.Length - 2;
             var modelName = System.Text.Encoding.ASCII.GetString(b, 2, count);
             sb.Append("Model name="); sb.AppendLine(modelName);
-            b = ProcessPacketCommand(new byte[] { PDC, 0x80 });//cis_command_version_req
+            b = await ProcessPacketCommandAsync(new byte[] { PDC, 0x80 });//cis_command_version_req
             sb.AppendLine($"System Control Version={b[2]}.{b[3]}, Interface Control Version={b[4]}.{b[5]}");
             sb.AppendLine(currentStatus.ToString());
             return sb.ToString();
@@ -541,16 +542,20 @@ namespace DiscChanger.Models
         }
 
   
-        private byte[] ProcessPacketCommand(byte[] command)
+        private async Task<byte[]> ProcessPacketCommandAsync(byte[] command)
         {
             SendCommand(command);
             byte[] b; int count = 0;
             do
             {
-                b = responses.Receive(CommandTimeOut);
+                try
+                {
+                    b = await responses.ReceiveAsync(CommandTimeOut);
+                }
+                catch (TimeoutException) { b=null; }
                 count++;
             }
-            while ((b.Length < 2 || b[0] != this.ResponsePDC || b[1] != command[1]) && count < 10);
+            while (count < 10&&(b==null||b.Length < 2 || b[0] != this.ResponsePDC || b[1] != command[1]) );
             if (count == 10)
             {
                 string err = "Did not get response to packet command: " + GetBytesToString(command);
@@ -559,29 +564,41 @@ namespace DiscChanger.Models
             }
             return b;
         }
-        private async Task<bool> ProcessAckCommand(byte[] command)
+
+        private async Task<bool> ProcessAckCommandAsync(byte[] command)
         {
             SendCommand(command);
             byte[] b; int count = 0;
             do
             {
-                b = await responses.ReceiveAsync(CommandTimeOut);
+                try
+                {
+                    b = await responses.ReceiveAsync(CommandTimeOut);
+                }
+                catch (TimeoutException) { b = null; }
                 count++;
             }
-            while (b.Length != 1 && count < 10);
-            if (b.Length == 1)
+            while (count < 10 && (b == null || b.Length !=1));
+            if (count == 10)
             {
-                if (b[0] == ACK)
-                    return true;
-                else if (b[0] == NACK)
-                    return false;
+                string err = "Did not get response to ack command: " + GetBytesToString(command);
+                System.Diagnostics.Debug.WriteLine(err);
+                throw new Exception(err);
             }
-            System.Diagnostics.Debug.WriteLine("Received unexpected response from " + GetBytesToString(command) + ": " + GetBytesToString(b));
-            throw new Exception("Received unexpected response from " + GetBytesToString(command) + ": " + GetBytesToString(b));
+            if (b[0] == ACK)
+                return true;
+            else if (b[0] == NACK)
+                return false;
+            else
+            {
+                string err = "Received 1-byte, neither ACK nor NACK, response from " + GetBytesToString(command) + ": " + GetBytesToString(b);
+                System.Diagnostics.Debug.WriteLine(err);
+                throw new Exception(err);
+            }
         }
         private async Task<bool> ProcessAckCommand(byte command)
         {
-            return await ProcessAckCommand(new byte[] { PDC, command });
+            return await ProcessAckCommandAsync(new byte[] { PDC, command });
         }
         static readonly byte ACK = 0xFD;
         static readonly byte NACK = 0xFE;
@@ -776,12 +793,8 @@ namespace DiscChanger.Models
                     currentStatus.modeDisc = (currentStatus.mode & 32) != 0 ? "all" : "one";
                     currentStatus.modeBroadCast = (byte)((currentStatus.mode >> 2) & 3);
                     currentStatus.setupLock = (byte)(currentStatus.mode & 1);
-
-                    //                                        string msg5 ="Status: " + (currentStatus.discNumber??-1) + "/" + (currentStatus.titleAlbumNumber ?? -1) + "/" + (currentStatus.chapterTrackNumber ?? -1) + ":" + currentStatus.status + "," + Convert.ToString(currentStatus.mode, 2);
                     string msg5 = "Status: " + currentStatus.ToString();
-
                     System.Diagnostics.Debug.WriteLine(msg5);
-                    //                                        _hubContext.Clients.All.SendAsync("ReceiveMessage", "test", msg5);
                     hubContext?.Clients.All.SendAsync("StatusData",
                                                        Key,
                                                        currentStatus.discNumber,
@@ -912,12 +925,12 @@ namespace DiscChanger.Models
             OpenSerial();
             try
             {
-                await ProcessAckCommand(new byte[] { PDC, 0x62, 0x02 });
+                await ProcessAckCommandAsync(new byte[] { PDC, 0x62, 0x02 });
                 SendCommand(new byte[] { PDC, 0x82 });
             }
             catch { }
         }
-        static protected TimeSpan PowerTimeSpan = new TimeSpan(0, 0, 0, 0, 200);
+        static protected TimeSpan PowerTimeSpan = TimeSpan.FromMilliseconds(200);
         public override async Task<string> Control(string command)
         {
             if (command.StartsWith("power"))
@@ -964,7 +977,7 @@ namespace DiscChanger.Models
                     {
                         try
                         {
-                            ack = await ProcessAckCommand(new byte[] { PDC, 0x62, 0x02 });
+                            ack = await ProcessAckCommandAsync(new byte[] { PDC, 0x62, 0x02 });
                             await Task.Delay(2000);
                         }
                         catch { }
@@ -999,7 +1012,7 @@ namespace DiscChanger.Models
             }
             //            byte control = pause? 0x01:0x00;//Play, 0x01 for pause
             var discDirectSetCommand = new byte[] { PDC, 0x4A, discNumberH, discNumberL, trackTitleNumberH, trackTitleNumberL, chapterNumberH, chapterNumberL, control };
-            return await ProcessAckCommand(discDirectSetCommand);
+            return await ProcessAckCommandAsync(discDirectSetCommand);
         }
     }
 
@@ -1096,31 +1109,22 @@ namespace DiscChanger.Models
                             if ( dd!=null&&dd.DiscType.StartsWith("SACD")&&
                                 Discs.TryGetValue(discNumberString, out Disc existingDisc)&&
                                 existingDisc is DiscSonyDVD existingDiscDVD &&
-                                existingDiscDVD.DiscData != null &&
-                                existingDiscDVD.DiscData.DiscType.StartsWith("SACD"))
-                            {
-                                if (newDiscDVD.TableOfContents != null)
+                                existingDiscDVD.DiscData?.DiscType != null &&
+                                existingDiscDVD.DiscData.DiscType.StartsWith("SACD")&&
+                                newDiscDVD.TableOfContents == null &&
+                                existingDiscDVD.TableOfContents?.TitleFrames != null &&
+                                existingDiscDVD.TableOfContents.TitleFrames.ContainsKey("CD") &&
+                                dd.TrackCount() >= existingDiscDVD.TableOfContents.TitleFrames["CD"].Length &&
+                                (String.IsNullOrEmpty(existingDiscDVD.DiscText.TextString) || existingDiscDVD.DiscText.TextString == newDiscDVD.DiscText.TextString )
+)                           {
+                                newDiscDVD.DateTimeAdded   = existingDiscDVD.DateTimeAdded; //preserve datetime from existing
+                                var toc = existingDiscDVD.TableOfContents;
+                                if(toc.Source==null)
                                 {
-                                    if((existingDiscDVD.TableOfContents==null|| existingDiscDVD.TableOfContents==newDiscDVD.TableOfContents)&&
-                                       String.IsNullOrEmpty(newDiscDVD.DiscText.TextString) && !String.IsNullOrEmpty(existingDiscDVD.DiscText.TextString))
-                                    {
-                                        newDiscDVD.DateTimeAdded = existingDiscDVD.DateTimeAdded; //preserve datetime from existing
-                                        newDiscDVD.DiscText = existingDiscDVD.DiscText;
-                                    }
+                                    toc = toc.ShallowCopy();
+                                    toc.Source = existingDiscDVD.DiscData.DiscType;
                                 }
-                                else
-                                {
-                                    if (existingDiscDVD.TableOfContents != null && (String.IsNullOrEmpty(existingDiscDVD.DiscText.TextString) || existingDiscDVD.DiscText.TextString == newDiscDVD.DiscText.TextString))
-                                    {
-                                        newDiscDVD.DateTimeAdded   = existingDiscDVD.DateTimeAdded; //preserve datetime from existing
-                                        newDiscDVD.TableOfContents = existingDiscDVD.TableOfContents;
-                                    }
-                                }
-                                // preserve the table of contents perhaps captured while the player's
-                                // SACD/CD mode was set to CD as the table of contents is not accessible in
-                                // SACD mode.
-                                if (!String.IsNullOrEmpty(existingDiscDVD.DiscText?.TextString) && String.IsNullOrEmpty(td.TextString))
-                                    newDiscDVD.DiscText = existingDiscDVD.DiscText;
+                                newDiscDVD.TableOfContents = toc;
                             }
                         }
                         else

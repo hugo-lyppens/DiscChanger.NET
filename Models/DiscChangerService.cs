@@ -222,15 +222,6 @@ namespace DiscChanger.Models
                 }
             }
         }
-        //internal void MoveDown(string key)
-        //{
-        //    Move(key, 1);
-        //}
-
-        //internal void MoveUp(string key)
-        //{
-        //    Move(key, -1);
-        //}
 
         internal void Delete(string key)
         {
