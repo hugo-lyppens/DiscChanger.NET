@@ -28,6 +28,7 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Hosting;
 using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks.Dataflow;
 
 namespace DiscChanger.Models
 {
@@ -50,8 +51,8 @@ namespace DiscChanger.Models
 
         private readonly IHubContext<DiscChangerHub> _hubContext;
         private string webRootPath, discChangersJsonFileName, discsPath, discsRelPath;
-        BlockingCollection<Disc> discDataMessages = new BlockingCollection<Disc>();
-        public void AddDiscData(Disc d ) { discDataMessages.Add(d); }
+        BufferBlock<Disc> discDataMessages = new BufferBlock<Disc>();
+        public void AddDiscData(Disc d ) { discDataMessages.Post(d); }
         public DiscChangerService(IWebHostEnvironment environment, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger)
         {
             _logger = logger;
@@ -101,32 +102,8 @@ namespace DiscChanger.Models
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Timed Hosted Service running.");
-            System.Diagnostics.Debug.WriteLine("Timed Hosted Service running.");
-            //DiscChanger dc = new DiscChanger();
-            //dc.Name = "Test";
-            //dc.Key = "test";
-            //var d = new Disc();
-            //d.TableOfContents = new Disc.TOC();
-            //d.DiscText = new Disc.Text();
-            //d.DiscData = new Disc.Data();
-
-            //dc.Discs[10] = d;
-            //var z = new ConcurrentDictionary<string, string>();
-            //z["aap"] = "noot";
-            //ConcurrentDictionary<string, List<int>> TitleFrames = new ConcurrentDictionary<string, List<int>>();
-            //TitleFrames["14"] = new List<int>() { 1, 2, 3, 4 };
-            //Dictionary<string, int> TitleFrames2 = new Dictionary<string, int>();
-            //TitleFrames2["14"] = 15;
-
-            //using (var f = File.Create(@"C:\temp\test.json"))
-            //{
-            //    var w = new Utf8JsonWriter(f, new JsonWriterOptions { Indented = true });
-            //    JsonSerializer.Serialize(w, TitleFrames);
-            //    f.Close();
-            //    needsSaving = false;
-            //}
-//            The following code registers the converter:
+            _logger.LogInformation("Hosted Service running.");
+            System.Diagnostics.Debug.WriteLine("Hosted Service running.");
 
             Load();
             discLookup = new MusicBrainz(Path.Combine(discsPath, "MusicBrainz"), discsRelPath+"/MusicBrainz");
@@ -159,48 +136,48 @@ namespace DiscChanger.Models
             }
             Task.WaitAll(connectTasks.ToArray());
             _logger.LogInformation("Hosted service starting");
+            TimeSpan discDataTimeOut = TimeSpan.FromSeconds(3);
 
             await Task.Factory.StartNew(async () =>
             {
                 // loop until a cancellation is requested
-                int count = 0;
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     _logger.LogInformation("Hosted service executing - {0}", DateTime.Now);
                     try
                     {
-                        while (this.discDataMessages.TryTake(out Disc d, 3000, cancellationToken))
+                        Disc d = await discDataMessages.ReceiveAsync(discDataTimeOut, cancellationToken);
+                        DiscChangerModel dc = d.DiscChanger;
+                        try
                         {
-                            DiscChangerModel dc = d.DiscChanger;
-                            try
-                            {
-                                MusicBrainz.Data mbd = discLookup.Lookup(d);
-                                d.LookupData = mbd;
-                                d.DateTimeAdded ??= DateTime.Now;
-                                dc.Discs[d.Slot] = d;
-                                needsSaving = true;
+                            MusicBrainz.Data mbd = discLookup.Lookup(d);
+                            d.LookupData = mbd;
+                            d.DateTimeAdded ??= DateTime.Now;
+                            dc.Discs[d.Slot] = d;
+                            needsSaving = true;
 
-                                await _hubContext.Clients.All.SendAsync("DiscData",
-                                       dc.Key,
-                                       d.Slot,
-                                       d.toHtml());
-                            }
-                            catch(Exception e)
-                            {
-                                _logger.LogInformation(e, "Lookup failed {Key} {Slot}", dc.Key, d.Slot);
-                            }
+                            await _hubContext.Clients.All.SendAsync("DiscData",
+                                    dc.Key,
+                                    d.Slot,
+                                    d.toHtml());
                         }
-                        ++count;
-
-                        if (needsSaving)
-                            Save();
-                        // wait for 3 seconds
-//                        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                        catch (Exception e)
+                        {
+                            _logger.LogInformation(e, "Lookup failed {Key} {Slot}", dc.Key, d.Slot);
+                        }
                     }
                     catch (OperationCanceledException) { }
+                    catch (TimeoutException) 
+                    {
+                        if (needsSaving)
+                            Save();
+                    }
+                    catch (Exception e) {
+                        System.Diagnostics.Debug.WriteLine( "Hosted Service Exception: "+e.Message);
+                        _logger.LogInformation(e, "Hosted Service Exception");
+                    }
                 }
             }, cancellationToken);
-            //            return Task.CompletedTask;
         }
 
         internal void Move(string key, int offset)

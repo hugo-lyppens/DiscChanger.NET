@@ -35,11 +35,11 @@ namespace DiscChanger.Hubs
             this.discChangerService = discChangerService;
         }
 
-        public async Task Control(string changerKey, string command)
+        public void Control(string changerKey, string command)
         {
             try
             {
-                await discChangerService.Changer(changerKey).Control(command);
+                _ = discChangerService.Changer(changerKey).Control(command);
             }
             catch (Exception e)
             {
