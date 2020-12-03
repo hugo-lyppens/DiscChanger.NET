@@ -18,6 +18,8 @@ Then ensure your changers are set up for RS232 control on their settings. Instal
 
 After you scanned all your discs, please be sure to make regular backups of the DiscChangers.json file and the Discs directory so you can restore it if needed without needing to rescan all discs.
 
+Just released version 1.0, which now can source all metadata the BDP-CX7000ES can provide about discs. This includes (provided successful GraceNote lookup): disc name/genre. For Audio CDs, track title. For BD: AACS ID and for CD,DVD&BD a Gracenote ID. If anyone knows how to use these identifiers to find art or other metadata, please let me know. Also added a feature for DVP-CX777ES & Hybrid SACD: normally the player only provides the TOC, which enables MusicBrainz lookup, when you force playback in CD mode via the "SACD/CD" button on the remote. In SACD mode the album lookup fails and you see only the CD-TEXT. With this new feature, DiscChanger.NET remembers the TOC from the CD layer even when switching to the SACD layer. So what you can do is do a disc scan while in CD mode so the metadata lookups for hybrid SACDs succeed. Then, once you play back you can switch to SACD to enjoy the highest quality and the album art will remain.
+
 Future enhancements planned:
 - Support for CX7000ES via TCP/IP in addition to Serial.
 - Support for <a href="https://www.getdigitaldata.com/GD3.aspx">GD3</a> lookups
