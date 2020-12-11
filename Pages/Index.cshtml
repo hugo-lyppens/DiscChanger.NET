@@ -116,7 +116,7 @@
         var key = dc.Key;
         var changerName = dc.Name;
         Models.DiscChangerModel.Status status = dc.CurrentStatus();
-        <script>updateControls("@key", @(status.discNumber?.ToString() ?? "null"), @(status.titleAlbumNumber?.ToString() ?? "null"), @(status.chapterTrackNumber?.ToString() ?? "null"), "@status.statusString", "@status.modeDisc");</script>
+        <script>updateControls('@key', @(status?.discNumber?.ToString()??"null"), @(status?.titleAlbumNumber?.ToString() ?? "null"), @(status?.chapterTrackNumber?.ToString() ?? "null"), '@(status?.statusString??"off")', '@(status?.modeDisc)');</script>
         var discs = dc.Discs;
         if (discs != null) {
             lock (discs) {

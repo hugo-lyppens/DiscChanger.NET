@@ -238,8 +238,11 @@ namespace DiscChanger.Models
         protected DiscChangerService discChangerService;
 
 
-        public struct Status
+        public class Status
         {
+            static TimeSpan StatusTimeSpan = TimeSpan.FromMinutes(2);
+            private DateTime timeStamp = DateTime.Now;
+            public bool IsOutDated() { return DateTime.Now - timeStamp >StatusTimeSpan; }
             public int? discNumber;
             public int? titleAlbumNumber;
             public int? chapterTrackNumber;
@@ -255,10 +258,14 @@ namespace DiscChanger.Models
             }
 
         };
-        protected Status currentStatus = new Status { statusString = "off" };
+        protected Status currentStatus = null;
         public virtual Status CurrentStatus()
         {
             return currentStatus;
+        }
+        public virtual void ClearStatus()
+        {
+            currentStatus=null;
         }
 
         public static string GetBytesToString(byte[] value)
@@ -273,7 +280,8 @@ namespace DiscChanger.Models
 
         public abstract Task Connect();
         public abstract Task Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger);
-
+        public abstract bool Connected();
+        public virtual void InitiateStatusUpdate() { }
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
@@ -428,7 +436,7 @@ namespace DiscChanger.Models
             sb.Append("Model name="); sb.AppendLine(modelName);
             b = await ProcessPacketCommandAsync(new byte[] { PDC, 0x80 });//cis_command_version_req
             sb.AppendLine($"System Control Version={b[2]}.{b[3]}, Interface Control Version={b[4]}.{b[5]}");
-            sb.AppendLine(currentStatus.ToString());
+            sb.AppendLine(currentStatus?.ToString()??"Unknown status");
             return sb.ToString();
         }
 
@@ -763,18 +771,20 @@ namespace DiscChanger.Models
             switch (cmd)
             {
                 case 0x82://STATUS_DATA
-                    currentStatus.discNumber = discNumber;
-                    currentStatus.titleAlbumNumber = FromBCD(b[4], b[5]);
-                    currentStatus.chapterTrackNumber = FromBCD(b[6], b[7]);
-                    currentStatus.status = b[8];
-                    currentStatus.statusString = statusCode2String[currentStatus.status];
-                    currentStatus.mode = b[9];
-                    currentStatus.modeDisc = (currentStatus.mode & 32) != 0 ? "all" : "one";
-                    currentStatus.modeBroadCast = (byte)((currentStatus.mode >> 2) & 3);
-                    currentStatus.setupLock = (byte)(currentStatus.mode & 1);
+                    Status newStatus = new Status();
+                    newStatus.discNumber = discNumber;
+                    newStatus.titleAlbumNumber = FromBCD(b[4], b[5]);
+                    newStatus.chapterTrackNumber = FromBCD(b[6], b[7]);
+                    newStatus.status = b[8];
+                    newStatus.statusString = statusCode2String[newStatus.status];
+                    newStatus.mode = b[9];
+                    newStatus.modeDisc = (newStatus.mode & 32) != 0 ? "all" : "one";
+                    newStatus.modeBroadCast = (byte)((newStatus.mode >> 2) & 3);
+                    newStatus.setupLock = (byte)(newStatus.mode & 1);
+                    currentStatus = newStatus;
                     string msg5 = "Status: " + currentStatus.ToString();
                     System.Diagnostics.Debug.WriteLine(msg5);
-                    hubContext?.Clients.All.SendAsync("StatusData",
+                    _ = hubContext?.Clients.All.SendAsync("StatusData",
                                                        Key,
                                                        currentStatus.discNumber,
                                                        currentStatus.titleAlbumNumber,
@@ -901,13 +911,25 @@ namespace DiscChanger.Models
 
         public override async Task Connect()
         {
-            OpenSerial();
             try
             {
+                ClearStatus();
+                OpenSerial();
                 await ProcessAckCommandAsync(new byte[] { PDC, 0x62, 0x02 });
-                SendCommand(new byte[] { PDC, 0x82 });
+                InitiateStatusUpdate();
             }
-            catch { }
+            catch(Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Exception in Connect(): " + e.Message);
+            }
+        }
+        public override bool Connected()
+        {
+            return serialPort != null && serialPort.IsOpen;
+        }
+        public override void InitiateStatusUpdate()
+        {
+            SendCommand(new byte[] { PDC, 0x82 }, false);
         }
         static protected TimeSpan PowerTimeSpan = TimeSpan.FromMilliseconds(200);
         public override async Task<string> Control(string command)
@@ -916,7 +938,7 @@ namespace DiscChanger.Models
             {
                 if (serialPort == null)
                     OpenSerial();
-                byte desiredState = command == "power_on" || (command == "power" && currentStatus.status == 0) ? (byte)1 : (byte)0;
+                byte desiredState = command == "power_on" || (command == "power" && (currentStatus==null||currentStatus.status == 0)) ? (byte)1 : (byte)0;
                 var powerCommand = new byte[] { PDC, 0x60, desiredState };
                 int iterations = desiredState * 9 + 1;
                 int i;

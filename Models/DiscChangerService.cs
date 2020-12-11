@@ -137,9 +137,10 @@ namespace DiscChanger.Models
             Task.WaitAll(connectTasks.ToArray());
             _logger.LogInformation("Hosted service starting");
             TimeSpan discDataTimeOut = TimeSpan.FromSeconds(3);
-
+            const int NullStatusQueryFrequency = 40;//only query null status every 40x3 seconds
             await Task.Factory.StartNew(async () =>
             {
+                int countDown = NullStatusQueryFrequency;
                 // loop until a cancellation is requested
                 while (!cancellationToken.IsCancellationRequested)
                 {
@@ -171,6 +172,19 @@ namespace DiscChanger.Models
                     {
                         if (needsSaving)
                             Save();
+                        countDown--;
+                        foreach (var discChanger in DiscChangers)
+                        {
+                            var status = discChanger.CurrentStatus();
+                            if((status == null && countDown == 0)/*||(status!=null&&status.IsOutDated())*/) //feature to refresh outdated status prevents auto off on DVP-CX777ES
+                            {
+                                discChanger.ClearStatus();
+                                if(discChanger.Connected())
+                                    discChanger.InitiateStatusUpdate();
+                            }
+                        }
+                        if (countDown <= 0)
+                            countDown = NullStatusQueryFrequency;
                     }
                     catch (Exception e) {
                         System.Diagnostics.Debug.WriteLine( "Hosted Service Exception: "+e.Message);
