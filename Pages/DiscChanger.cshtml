@@ -32,7 +32,7 @@
         <input asp-for="Name" />
         <label asp-for="Type">Type</label>
         @Html.DropDownListFor(m => m.Type,
-                 new SelectList(DiscChangerService.ChangerTypes), Model.OnChangeSubmit)
+                 new SelectList(DiscChanger.Models.DiscChangerModel.ChangerTypes), Model.OnChangeSubmit)
         @if (!String.IsNullOrEmpty(Model.Type))
         {
             @if (Model.ConnectionTypes != null)
@@ -41,7 +41,7 @@
                 @Html.DropDownListFor(m => m.Connection,
                           new SelectList(Model.ConnectionTypes), Model.OnChangeSubmit)
             }
-            @if (Model.Connection == DiscChangerService.CONNECTION_SERIAL_PORT)
+            @if (Model.Connection == DiscChanger.Models.DiscChangerModel.CONNECTION_SERIAL_PORT)
             {
                 <label asp-for="PortName">Port</label>
                 @Html.DropDownListFor(m => m.PortName,
@@ -50,12 +50,12 @@
                 <input asp-for="HardwareFlowControl" type="checkbox" />
 
             }
-            else if (Model.Connection == "IP")
+            else if (Model.Connection == DiscChanger.Models.DiscChangerModel.CONNECTION_NETWORK )
             {
-                <label asp-for="IPAddress">IP Address</label>
-                <input asp-for="IPAddress" />
+                <label asp-for="NetworkAddress">IP Address</label>
+                <input asp-for="NetworkAddress" />
             }
-            @if (Model.Type == DiscChangerService.BDP_CX7000ES)
+            @if (Model.Type == DiscChangerSonyBD.BDP_CX7000ES)
             {
                 <label asp-for="CommandMode">Command Mode</label>
                 @Html.DropDownListFor(m => m.CommandMode,

@@ -38,12 +38,6 @@ namespace DiscChanger.Models
         public List<DiscChangerModel> DiscChangers { get; private set; }
         public MusicBrainz discLookup;
 
-        public const string CONNECTION_SERIAL_PORT = "SerialPort";
-        public const string CONNECTION_IP = "IP";
-        public static readonly string[] ConnectionTypes = new string[] { CONNECTION_SERIAL_PORT, CONNECTION_IP };
-        public const string DVP_CX777ES = "Sony DVP-CX777ES";
-        public const string BDP_CX7000ES = "Sony BDP-CX7000ES";
-        public static readonly string[] ChangerTypes = new string[] { String.Empty, DVP_CX777ES, BDP_CX7000ES };
 
         private Dictionary<string, DiscChangerModel> key2DiscChanger;
 
@@ -227,10 +221,10 @@ namespace DiscChanger.Models
             }
         }
 
-        internal async Task<string> Test(string key, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl)
+        internal async Task<string> Test(string key, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkAddress)
         {
             DiscChangerModel d = null;
-            bool b = key!=null&&key2DiscChanger.TryGetValue(key, out d) && connection == d.Connection && portName == d.PortName;
+            bool b = key!=null&&key2DiscChanger.TryGetValue(key, out d) && connection == d.Connection && portName == d.PortName && networkAddress == d.NetworkHost;
             if (b)
                 d.Disconnect();
             DiscChangerModel dc = DiscChangerModel.Create(type);
@@ -240,12 +234,13 @@ namespace DiscChanger.Models
                 dc.CommandMode = commandMode;
                 dc.PortName = portName;
                 dc.HardwareFlowControl = HardwareFlowControl;
+                dc.NetworkHost = networkAddress;
                 await dc.Connect(null, null, _logger);
                 return await dc.Test();
             }
             catch (Exception e)
             {
-                return $"Disc changer testing of ({key},{type},{connection},{commandMode},{portName},{HardwareFlowControl}) returned error: {e.Message}";
+                return $"Disc changer testing of ({key},{type},{connection},{commandMode},{portName},{HardwareFlowControl},{networkAddress}) returned error: {e.Message}";
             }
             finally
             {
@@ -254,7 +249,7 @@ namespace DiscChanger.Models
                     await d.Connect();
             }
         }
-        internal void Add(string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl)
+        internal void Add(string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkAddress)
         {
             lock (this.DiscChangers)
             {
@@ -267,36 +262,37 @@ namespace DiscChanger.Models
                     key = keyBase + i.ToString();
                 }
                 DiscChangerModel dc = DiscChangerModel.Create(type);dc.Key = key;
-                Update(dc, name, type, connection, commandMode, portName, HardwareFlowControl);
+                Update(dc, name, type, connection, commandMode, portName, HardwareFlowControl, networkAddress);
                 DiscChangers.Add(dc);
                 key2DiscChanger[key] = dc;
                 Save();
                 _hubContext.Clients.All.SendAsync("Reload");
             }
         }
-        internal void Update(string key, string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl )
+        internal void Update(string key, string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkAddress )
         {
             lock (this.DiscChangers)
             {
-                Update(key2DiscChanger[key], name, type, connection, commandMode, portName, HardwareFlowControl);
+                Update(key2DiscChanger[key], name, type, connection, commandMode, portName, HardwareFlowControl, networkAddress);
                 Save();
                 _hubContext.Clients.All.SendAsync("Reload");
             }
         }
-        internal void Update(DiscChangerModel discChanger, string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl)
+        internal void Update(DiscChangerModel discChanger, string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkAddress )
         {
             lock (this.DiscChangers)
             {
                 if (DiscChangers.Any(dc =>dc!=discChanger && dc.Name==name))
                     throw new Exception($"Name {name} already exists");
-                if (DiscChangers.Any(dc=>dc!=discChanger && dc.Connection==connection && dc.PortName==portName ))
-                    throw new Exception($"Connection {connection}:{portName} already in use");
+                if (DiscChangers.Any(dc=>dc!=discChanger && dc.Connection==connection && dc.PortName==portName &&dc.NetworkHost==networkAddress))
+                    throw new Exception($"Connection {connection}:{portName} {networkAddress} already in use");
                 discChanger.Name = name;
                 discChanger.Type = type;
                 if (discChanger.Connection != connection || 
                     discChanger.PortName != portName ||
                     discChanger.CommandMode != commandMode ||
-                    discChanger.HardwareFlowControl != HardwareFlowControl )
+                    discChanger.HardwareFlowControl != HardwareFlowControl ||
+                    discChanger.NetworkHost != networkAddress )
                 {
                     discChanger.Disconnect();
                     //discChanger.Protocol   = protocol;
@@ -304,6 +300,7 @@ namespace DiscChanger.Models
                     discChanger.CommandMode = commandMode;
                     discChanger.PortName    = portName;
                     discChanger.HardwareFlowControl = HardwareFlowControl;
+                    discChanger.NetworkHost = networkAddress;
                     discChanger.Connect(this, this._hubContext, _logger);
                 }
             }
@@ -334,8 +331,6 @@ namespace DiscChanger.Models
             //_timer?.Change(Timeout.Infinite, 0);
             foreach (var dc in this.DiscChangers)
                 dc.Disconnect();
-//            mySerialPort.Close();
-
             return Task.CompletedTask;
         }
 

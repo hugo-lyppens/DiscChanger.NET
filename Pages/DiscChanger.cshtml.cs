@@ -38,7 +38,7 @@ namespace DiscChanger.Pages
         public string Type { get; set; }
         public string Connection { get; set; }
         public string PortName { get; set; }
-        public string IPAddress { get; set; }
+        public string NetworkAddress { get; set; }
         public string CommandMode { get; set; }
         public string Save { get; set; }
         public string Cancel { get; set; }
@@ -65,21 +65,22 @@ namespace DiscChanger.Pages
                 Connection ??= discChanger.Connection;
                 CommandMode ??= discChanger.CommandMode;
                 PortName ??= discChanger.PortName;
+                NetworkAddress ??= discChanger.NetworkHost;
                 HardwareFlowControl ??= discChanger.HardwareFlowControl?.ToString();
             }
             switch (Type)
             {
-                case DiscChangerService.DVP_CX777ES:
+                case DiscChangerSonyDVD.DVP_CX777ES:
                     CommandMode = null;
-                    Connection = DiscChangerService.CONNECTION_SERIAL_PORT;
-                    ConnectionTypes = new string[] { DiscChangerService.CONNECTION_SERIAL_PORT }; break;
-                case DiscChangerService.BDP_CX7000ES:
+                    Connection = DiscChanger.Models.DiscChangerModel.CONNECTION_SERIAL_PORT;
+                    ConnectionTypes = new string[] { DiscChanger.Models.DiscChangerModel.CONNECTION_SERIAL_PORT }; break;
+                case DiscChangerSonyBD.BDP_CX7000ES:
                     CommandMode ??= DiscChangerSonyBD.CommandModes[0];  
-                    Connection ??= DiscChangerService.CONNECTION_SERIAL_PORT;
-                    ConnectionTypes = new string[] { DiscChangerService.CONNECTION_SERIAL_PORT/*, "IP"*/ }; break;
+                    Connection ??= DiscChanger.Models.DiscChangerModel.CONNECTION_SERIAL_PORT;
+                    ConnectionTypes = new string[] { DiscChanger.Models.DiscChangerModel.CONNECTION_SERIAL_PORT, DiscChanger.Models.DiscChangerModel.CONNECTION_NETWORK }; break;
             }
             SerialPortNames = null;
-            if (Connection == DiscChangerService.CONNECTION_SERIAL_PORT)
+            if (Connection == DiscChanger.Models.DiscChangerModel.CONNECTION_SERIAL_PORT)
             {
                 HardwareFlowControl ??= "true";
                 SerialPortNames = Array.FindAll(SerialPort.GetPortNames(), p => discChangerService.DiscChangers.All(dc => dc == discChanger || dc.PortName != p));
@@ -94,7 +95,7 @@ namespace DiscChanger.Pages
         }
         public async Task<IActionResult> OnPostAsync(string op = null)
         {
-            bool? hfc = Connection == DiscChangerService.CONNECTION_SERIAL_PORT&& HardwareFlowControl!=null ? (bool?)Boolean.Parse(HardwareFlowControl) : null;
+            bool? hfc = Connection == DiscChanger.Models.DiscChangerModel.CONNECTION_SERIAL_PORT&& HardwareFlowControl!=null ? (bool?)Boolean.Parse(HardwareFlowControl) : null;
             switch (op)
             {
                 case "OK":
@@ -102,11 +103,11 @@ namespace DiscChanger.Pages
                     {
                         if (!String.IsNullOrEmpty(Key))
                         {
-                            discChangerService.Update(Key, Name, Type, Connection, CommandMode, PortName, hfc);
+                            discChangerService.Update(Key, Name, Type, Connection, CommandMode, PortName, hfc, NetworkAddress);
                         }
                         else
                         {
-                            discChangerService.Add(Name, Type, Connection, CommandMode, PortName, hfc);
+                            discChangerService.Add(Name, Type, Connection, CommandMode, PortName, hfc, NetworkAddress);
                         }
                     }
                     return RedirectToPage("Index");
@@ -114,7 +115,7 @@ namespace DiscChanger.Pages
                     return RedirectToPage("Index");
                 case "Test":
                     updateModel(Key);
-                    this.TestResult = await discChangerService.Test(Key, Type, Connection, CommandMode, PortName, hfc);
+                    this.TestResult = await discChangerService.Test(Key, Type, Connection, CommandMode, PortName, hfc, NetworkAddress);
                     return Page();
                 default:
                     updateModel(Key);

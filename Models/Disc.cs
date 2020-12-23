@@ -279,6 +279,7 @@ namespace DiscChanger.Models
             public string Source { get; set; }
             public string[] Titles { get; set; }
             public ConcurrentDictionary<string, int[]> TitleFrames { get; set; }
+            public int PacketCount=0;
             public TOC ShallowCopy()
             {
                 return (TOC)MemberwiseClone();
@@ -584,7 +585,16 @@ namespace DiscChanger.Models
         public Information DiscInformation { get; set; }
         public class IDData : IEquatable<IDData>
         {
-            public enum DataType : byte { GraceNoteDiscID=1, AACSDiscID=2 };
+            public enum DataTypeSerial : byte { GraceNoteDiscID=1, AACSDiscID=2 };
+            //"0x00 : Information of IP_DISC_ID_DATA (Current Disc ID for Gracenote)
+            //0x01 : Information of IP_DISC_ID_DATA(Current Disc ID from AACS file)
+            //0x02 : Current Disc ID for Gracenote
+            //0x03 : Current Disc ID from AACS file(valid if BD is mounted )
+            //0x04 – 0xff  : reserved  "							
+            public enum DataTypeNetwork : byte { GraceNoteDiscID_Info = 0, AACSDiscID_Info = 1, GraceNoteDiscID = 2, AACSDiscID = 3 };
+
+            public int AACSDiscIDPacketCount = 0;
+            public int GraceNoteDiscIDPacketCount = 0;
 
             public string GraceNoteDiscID { get; set; }
             public byte[] AACSDiscID { get; set; }
