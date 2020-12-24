@@ -9,19 +9,19 @@ using MetaBrainz.MusicBrainz.DiscId.Standards;
 
 namespace DiscChanger.Models
 {
-    public class DiscChangerModelConverter: JsonConverter<DiscChangerModel>
+    public class DiscChangerConverter: JsonConverter<DiscChanger>
     {
         public override bool CanConvert(Type typeToConvert) =>
-            typeof(DiscChangerModel).IsAssignableFrom(typeToConvert);
+            typeof(DiscChanger).IsAssignableFrom(typeToConvert);
 
-        public override DiscChangerModel Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override DiscChanger Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType != JsonTokenType.StartObject)
             {
                 throw new JsonException();
             }
             Dictionary<string, object> propertyValues = new Dictionary<string, object>();
-            DiscChangerModel discChanger = null;
+            DiscChanger discChanger = null;
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
@@ -43,7 +43,7 @@ namespace DiscChanger.Models
                     switch (propertyName)
                     {
                         case "Type":
-                            discChanger = DiscChangerModel.Create(reader.GetString()); break;
+                            discChanger = DiscChanger.Create(reader.GetString()); break;
                         case "DiscList":
                             if (discChanger == null)
                                 throw new JsonException();
@@ -68,7 +68,7 @@ namespace DiscChanger.Models
             throw new JsonException();
         }
 
-        public override void Write(Utf8JsonWriter writer, DiscChangerModel discChanger, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, DiscChanger discChanger, JsonSerializerOptions options)
         {
             writer.WriteStartObject();
             foreach (var p in discChanger.GetType().GetProperties().OrderBy(x => x.MetadataToken))

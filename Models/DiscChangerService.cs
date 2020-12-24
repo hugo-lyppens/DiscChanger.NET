@@ -35,11 +35,11 @@ namespace DiscChanger.Models
     //    public class DiscChanger : IHostedService, IDisposable
     public class DiscChangerService : BackgroundService
     {
-        public List<DiscChangerModel> DiscChangers { get; private set; }
+        public List<DiscChanger> DiscChangers { get; private set; }
         public MusicBrainz discLookup;
 
 
-        private Dictionary<string, DiscChangerModel> key2DiscChanger;
+        private Dictionary<string, DiscChanger> key2DiscChanger;
 
         private readonly ILogger<DiscChangerService> _logger;
 
@@ -59,7 +59,7 @@ namespace DiscChanger.Models
         private void Load()
         {
             this._logger.LogInformation("Loading from " + discChangersJsonFileName);
-            DiscChangers = File.Exists(discChangersJsonFileName) ? JsonSerializer.Deserialize<List<DiscChangerModel>>(File.ReadAllBytes(discChangersJsonFileName)) : new List<DiscChangerModel>();
+            DiscChangers = File.Exists(discChangersJsonFileName) ? JsonSerializer.Deserialize<List<DiscChanger>>(File.ReadAllBytes(discChangersJsonFileName)) : new List<DiscChanger>();
             //using (var f = File.Create(@"C:\Temp\dc.json"))
             //{
             //    //var discs = DiscChangers[2].Discs;
@@ -102,7 +102,7 @@ namespace DiscChanger.Models
             Load();
             discLookup = new MusicBrainz(Path.Combine(discsPath, "MusicBrainz"), discsRelPath+"/MusicBrainz");
 
-            key2DiscChanger = new Dictionary<string, DiscChangerModel>(DiscChangers.Count);
+            key2DiscChanger = new Dictionary<string, DiscChanger>(DiscChangers.Count);
             List<Task> connectTasks = new List<Task>(DiscChangers.Count);
             foreach (var discChanger in DiscChangers)
             {
@@ -142,7 +142,7 @@ namespace DiscChanger.Models
                     try
                     {
                         Disc d = await discDataMessages.ReceiveAsync(discDataTimeOut, cancellationToken);
-                        DiscChangerModel dc = d.DiscChanger;
+                        DiscChanger dc = d.DiscChanger;
                         try
                         {
                             MusicBrainz.Data mbd = discLookup.Lookup(d);
@@ -198,7 +198,7 @@ namespace DiscChanger.Models
                     int j = i + offset;
                     if (j >= 0 && j < DiscChangers.Count)
                     {
-                        DiscChangerModel dc = DiscChangers[i];
+                        DiscChanger dc = DiscChangers[i];
                         DiscChangers[i] = DiscChangers[i + offset];
                         DiscChangers[i + offset] = dc;
                         Save();
@@ -223,11 +223,11 @@ namespace DiscChanger.Models
 
         internal async Task<string> Test(string key, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkHost, int? networkPort)
         {
-            DiscChangerModel d = null;
+            DiscChanger d = null;
             bool b = key != null && key2DiscChanger.TryGetValue(key, out d) && connection == d.Connection && portName == d.PortName && networkHost == d.NetworkHost && networkPort == d.NetworkPort;
             if (b)
                 d.Disconnect();
-            DiscChangerModel dc = DiscChangerModel.Create(type);
+            DiscChanger dc = DiscChanger.Create(type);
             try
             {
                 dc.Connection = connection;
@@ -262,7 +262,7 @@ namespace DiscChanger.Models
                     i++;
                     key = keyBase + i.ToString();
                 }
-                DiscChangerModel dc = DiscChangerModel.Create(type);dc.Key = key;
+                DiscChanger dc = DiscChanger.Create(type);dc.Key = key;
                 Update(dc, name, type, connection, commandMode, portName, HardwareFlowControl, networkHost, networkPort);
                 DiscChangers.Add(dc);
                 key2DiscChanger[key] = dc;
@@ -279,7 +279,7 @@ namespace DiscChanger.Models
                 _hubContext.Clients.All.SendAsync("Reload");
             }
         }
-        internal void Update(DiscChangerModel discChanger, string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkHost, int? networkPort)
+        internal void Update(DiscChanger discChanger, string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkHost, int? networkPort)
         {
             lock (this.DiscChangers)
             {
@@ -309,7 +309,7 @@ namespace DiscChanger.Models
             }
         }
 
-        public DiscChangerModel Changer(string changerKey)
+        public DiscChanger Changer(string changerKey)
         {
             return key2DiscChanger[changerKey];
         }

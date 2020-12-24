@@ -51,7 +51,7 @@ namespace DiscChanger.Models
 
         public MusicBrainz.Data LookupData;
         public string Slot { get; set; }
-        public DiscChangerModel DiscChanger;
+        public DiscChanger DiscChanger;
         public System.DateTime? DateTimeAdded { get; set; }
 
 

@@ -1,6 +1,6 @@
 ﻿/*  Copyright 2020 Hugo Lyppens
 
-    DiscChangerModel.cs is part of DiscChanger.NET.
+    DiscChanger.cs is part of DiscChanger.NET.
 
     DiscChanger.NET is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -35,8 +35,8 @@ using System.Net;
 
 namespace DiscChanger.Models
 {
-    [JsonConverter(typeof(DiscChangerModelConverter))]
-    public abstract class DiscChangerModel : IDisposable
+    [JsonConverter(typeof(DiscChangerConverter))]
+    public abstract class DiscChanger : IDisposable
     {
         public string Name { get; set; }
         public string Key { get; set; }
@@ -121,7 +121,7 @@ namespace DiscChanger.Models
                 throw new Exception("WriteBytes neither serial port nor network connection");
         }
 
-        static public DiscChangerModel Create(string Type)
+        static public DiscChanger Create(string Type)
         {
             switch (Type)
             {
@@ -130,7 +130,7 @@ namespace DiscChanger.Models
                 case DiscChangerSonyDVD.DVP_CX777ES:
                     return new DiscChangerSonyDVD(Type);
                 default:
-                    throw new Exception($"DiscChangerModel.Create unknown type {Type}");
+                    throw new Exception($"DiscChanger.Create unknown type {Type}");
             }
         }
 
@@ -378,7 +378,7 @@ namespace DiscChanger.Models
             GC.SuppressFinalize(this);
         }
     }
-    public abstract class DiscChangerSony : DiscChangerModel
+    public abstract class DiscChangerSony : DiscChanger
     {
 
         public bool AdjustLastTrackLength { get; set; } = true;
