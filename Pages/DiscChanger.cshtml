@@ -50,10 +50,12 @@
                 <input asp-for="HardwareFlowControl" type="checkbox" />
 
             }
-            else if (Model.Connection == DiscChanger.Models.DiscChangerModel.CONNECTION_NETWORK )
+            else if (Model.Connection == DiscChanger.Models.DiscChangerModel.CONNECTION_NETWORK)
             {
-                <label asp-for="NetworkAddress">IP Address</label>
-                <input asp-for="NetworkAddress" />
+                <label asp-for="NetworkHost">Host Name or IP Address</label>
+                <input asp-for="NetworkHost" />
+                <label asp-for="NetworkPort">Port Number</label>
+                <input type="number" asp-for="NetworkPort" min="1024" max="65535" />
             }
             @if (Model.Type == DiscChangerSonyBD.BDP_CX7000ES)
             {

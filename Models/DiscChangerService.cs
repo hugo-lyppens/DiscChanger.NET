@@ -221,10 +221,10 @@ namespace DiscChanger.Models
             }
         }
 
-        internal async Task<string> Test(string key, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkAddress)
+        internal async Task<string> Test(string key, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkHost, int? networkPort)
         {
             DiscChangerModel d = null;
-            bool b = key!=null&&key2DiscChanger.TryGetValue(key, out d) && connection == d.Connection && portName == d.PortName && networkAddress == d.NetworkHost;
+            bool b = key != null && key2DiscChanger.TryGetValue(key, out d) && connection == d.Connection && portName == d.PortName && networkHost == d.NetworkHost && networkPort == d.NetworkPort;
             if (b)
                 d.Disconnect();
             DiscChangerModel dc = DiscChangerModel.Create(type);
@@ -234,13 +234,14 @@ namespace DiscChanger.Models
                 dc.CommandMode = commandMode;
                 dc.PortName = portName;
                 dc.HardwareFlowControl = HardwareFlowControl;
-                dc.NetworkHost = networkAddress;
+                dc.NetworkHost = networkHost;
+                dc.NetworkPort = networkPort;
                 await dc.Connect(null, null, _logger);
                 return await dc.Test();
             }
             catch (Exception e)
             {
-                return $"Disc changer testing of ({key},{type},{connection},{commandMode},{portName},{HardwareFlowControl},{networkAddress}) returned error: {e.Message}";
+                return $"Disc changer testing of ({key},{type},{connection},{commandMode},{portName},{HardwareFlowControl},{networkHost}) returned error: {e.Message}";
             }
             finally
             {
@@ -249,7 +250,7 @@ namespace DiscChanger.Models
                     await d.Connect();
             }
         }
-        internal void Add(string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkAddress)
+        internal void Add(string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkHost, int? networkPort)
         {
             lock (this.DiscChangers)
             {
@@ -262,37 +263,38 @@ namespace DiscChanger.Models
                     key = keyBase + i.ToString();
                 }
                 DiscChangerModel dc = DiscChangerModel.Create(type);dc.Key = key;
-                Update(dc, name, type, connection, commandMode, portName, HardwareFlowControl, networkAddress);
+                Update(dc, name, type, connection, commandMode, portName, HardwareFlowControl, networkHost, networkPort);
                 DiscChangers.Add(dc);
                 key2DiscChanger[key] = dc;
                 Save();
                 _hubContext.Clients.All.SendAsync("Reload");
             }
         }
-        internal void Update(string key, string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkAddress )
+        internal void Update(string key, string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkHost, int? networkPort)
         {
             lock (this.DiscChangers)
             {
-                Update(key2DiscChanger[key], name, type, connection, commandMode, portName, HardwareFlowControl, networkAddress);
+                Update(key2DiscChanger[key], name, type, connection, commandMode, portName, HardwareFlowControl, networkHost, networkPort);
                 Save();
                 _hubContext.Clients.All.SendAsync("Reload");
             }
         }
-        internal void Update(DiscChangerModel discChanger, string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkAddress )
+        internal void Update(DiscChangerModel discChanger, string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkHost, int? networkPort)
         {
             lock (this.DiscChangers)
             {
                 if (DiscChangers.Any(dc =>dc!=discChanger && dc.Name==name))
                     throw new Exception($"Name {name} already exists");
-                if (DiscChangers.Any(dc=>dc!=discChanger && dc.Connection==connection && dc.PortName==portName &&dc.NetworkHost==networkAddress))
-                    throw new Exception($"Connection {connection}:{portName} {networkAddress} already in use");
+                if (DiscChangers.Any(dc=>dc!=discChanger && dc.Connection==connection && dc.PortName==portName &&dc.NetworkHost==networkHost&&dc.NetworkPort== networkPort))
+                    throw new Exception($"Connection {connection}:{portName} {networkHost} already in use");
                 discChanger.Name = name;
                 discChanger.Type = type;
                 if (discChanger.Connection != connection || 
                     discChanger.PortName != portName ||
                     discChanger.CommandMode != commandMode ||
                     discChanger.HardwareFlowControl != HardwareFlowControl ||
-                    discChanger.NetworkHost != networkAddress )
+                    discChanger.NetworkHost != networkHost ||
+                    discChanger.NetworkPort != networkPort)
                 {
                     discChanger.Disconnect();
                     //discChanger.Protocol   = protocol;
@@ -300,7 +302,8 @@ namespace DiscChanger.Models
                     discChanger.CommandMode = commandMode;
                     discChanger.PortName    = portName;
                     discChanger.HardwareFlowControl = HardwareFlowControl;
-                    discChanger.NetworkHost = networkAddress;
+                    discChanger.NetworkHost = networkHost;
+                    discChanger.NetworkPort = networkPort;
                     discChanger.Connect(this, this._hubContext, _logger);
                 }
             }

@@ -46,7 +46,7 @@ namespace DiscChanger.Models
         public string CommandMode { get; set; }
         public string PortName { get; set; }
         public string NetworkHost { get; set; }
-        public int NetworkPort { get; set; }
+        public int? NetworkPort { get; set; }
         protected ILogger<DiscChangerService> logger;
         protected IHubContext<DiscChangerHub> hubContext;
         protected SerialPort serialPort;
@@ -774,21 +774,33 @@ namespace DiscChanger.Models
 
         private void NetworkReceiveCallback(IAsyncResult ar)
         {
-            int bytesRead = networkSocket.EndReceive(ar);
-            if( bytesRead!=1)
-                System.Diagnostics.Debug.WriteLine($"unexpected EndReceive result: {bytesRead}");
-            do
+            try
             {
-                byte startByte = networkBuffer[0];
-                if (startByte != 2)
-                    responses.Post(new byte[1] { startByte });
+                Socket socket = (Socket)ar.AsyncState;
+                int bytesRead = socket.EndReceive(ar);
+                if (bytesRead != 1)
+                    System.Diagnostics.Debug.WriteLine($"unexpected EndReceive result: {bytesRead}");
                 else
                 {
-                    byte[] b = ReadPacketData();
-                    HandlePacket(b);
+                    do
+                    {
+                        byte startByte = networkBuffer[0];
+                        if (startByte != 2)
+                            responses.Post(new byte[1] { startByte });
+                        else if(networkSocket != null && networkSocket.Connected)
+                        {
+                            byte[] b = ReadPacketData();
+                            HandlePacket(b);
+                        }
+                    } while (networkSocket != null && networkSocket.Connected&&networkSocket.Available >= 1 && networkSocket.Receive(networkBuffer, 0, 1, SocketFlags.None) == 1);
+                    if (networkSocket != null && networkSocket.Connected)
+                        networkSocket.BeginReceive(networkBuffer, 0, NetworkBufferSize, 0, new AsyncCallback(NetworkReceiveCallback), networkSocket);
                 }
-            } while (networkSocket.Available >= 1 && networkSocket.Receive(networkBuffer, 0, 1, SocketFlags.None) == 1);
-            networkSocket.BeginReceive(networkBuffer, 0, NetworkBufferSize, 0, new AsyncCallback(NetworkReceiveCallback), this);
+            }
+            catch(Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine($"NetworkReceiveCallback exception {e.Message} in disc changer {Name}");
+            }
         }
 
         private void SerialPortReceiveCallback(
@@ -1068,15 +1080,15 @@ namespace DiscChanger.Models
                                                    ProtocolType.Tcp);
                         networkSocket.ReceiveTimeout = ReadTimeout;
                         networkSocket.SendTimeout = WriteTimeout;
-                        networkSocket.Connect(NetworkHost, NetworkPort);
+                        networkSocket.Connect(NetworkHost, NetworkPort.Value);
                         networkBuffer = new byte[NetworkBufferSize];
-                        networkSocket.BeginReceive(networkBuffer, 0, NetworkBufferSize, 0, new AsyncCallback(NetworkReceiveCallback), this);
+                        networkSocket.BeginReceive(networkBuffer, 0, NetworkBufferSize, 0, new AsyncCallback(NetworkReceiveCallback), networkSocket);
                     }
                     catch
                     {
                         try
                         {
-                            networkSocket?.Close();
+                            networkSocket?.Close(); networkSocket?.Dispose();
                         }
                         catch { };
                         networkSocket = null;
