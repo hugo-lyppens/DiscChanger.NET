@@ -1,7 +1,7 @@
 ﻿@*
     Copyright 2020 Hugo Lyppens
 
-    DiscChanger.cshtml is part of DiscChanger.NET.
+    DiscChangerConfig.cshtml is part of DiscChanger.NET.
 
     DiscChanger.NET is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -52,14 +52,14 @@
             }
             else if (Model.Connection == global::DiscChanger.Models.DiscChanger.CONNECTION_NETWORK)
             {
-                <label asp-for="NetworkHost">Host Name or IP Address</label>
-                <input asp-for="NetworkHost" />
-                <label asp-for="NetworkPort">Port Number</label>
-                <input type="number" asp-for="NetworkPort" min="1024" max="65535" />
+                <label asp-for="NetworkHost" title="Use DHCP reservation, configure fixed IP address, or assign DNS name">Host Name or IP Address</label>
+                <input asp-for="NetworkHost" title="Use DHCP reservation, configure fixed IP address, or assign DNS name"/>
+                <label asp-for="NetworkPort" title="While BDP-CX7000ES UPnP port is 8888, DiscChanger.NET uses port 6001 direct connection">Port Number</label>
+                <input type="number" asp-for="NetworkPort" title="While BDP-CX7000ES UPnP port is 8888, DiscChanger.NET uses port 6001 direct connection" min="1024" max="65535" />
             }
             @if (Model.Type == DiscChangerSonyBD.BDP_CX7000ES)
             {
-                <label asp-for="CommandMode">Command Mode</label>
+                <label asp-for="CommandMode" title="Part of command spec, but it appears you need to select BD1 regardless of configured remote control command set">Command Mode</label>
                 @Html.DropDownListFor(m => m.CommandMode,
                                            new SelectList(DiscChangerSonyBD.CommandModes))
             }

@@ -78,7 +78,7 @@ namespace DiscChanger.Models
                     networkSocket.Receive(new byte[a]);
             }
             else
-                throw new Exception("ReadByte neither serial port nor network connection");
+                throw new Exception("DiscardInBuffer neither serial port nor network connection");
         }
 
         protected byte ReadByte()
@@ -380,6 +380,15 @@ namespace DiscChanger.Models
     }
     public abstract class DiscChangerSony : DiscChanger
     {
+        public enum Command : byte
+        {
+            CIS_COMMAND_VERSION = 0x80,
+            STATUS_DATA=0x82,
+            DISC_EXIST_BIT=0x8C,
+            DISC_DATA = 0x8A,
+            TOC_DATA = 0x8B,
+            MODEL_NAME = 0xA0
+        }; 
 
         public bool AdjustLastTrackLength { get; set; } = true;
         public bool ReverseDiscExistBytes { get; set; } = false;
@@ -432,12 +441,13 @@ namespace DiscChanger.Models
             byte cmd;
             byte[] discExistBitReq=null;
             if (this.networkSocket != null)
-            {   cmd = 0xCC;
+            {
+                cmd = (byte)DiscChangerSonyBD.Command.DISC_EXIST_BIT_NETWORK;
                 discExistBitReq = new byte[] { PDC, cmd, 0 };
             }
             else
             { 
-                cmd = 0x8C;
+                cmd = (byte)Command.DISC_EXIST_BIT;
                 SendCommand(new byte[] { PDC, cmd });
             }
             List<byte> discExistBit = new List<byte>(50);
@@ -515,12 +525,12 @@ namespace DiscChanger.Models
             StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("Power OK: " + await Control("power_on"));
-            byte[] b = await ProcessPacketCommandAsync(new byte[] { PDC, 0xA0 });//Model_name_req
+            byte[] b = await ProcessPacketCommandAsync(new byte[] { PDC, (byte)Command.MODEL_NAME });
             var i = Array.IndexOf(b, (byte)0, 2);
             var count = i != -1 ? i - 2 : b.Length - 2;
             var modelName = System.Text.Encoding.ASCII.GetString(b, 2, count);
             sb.Append("Model name="); sb.AppendLine(modelName);
-            b = await ProcessPacketCommandAsync(new byte[] { PDC, 0x80 });//cis_command_version_req
+            b = await ProcessPacketCommandAsync(new byte[] { PDC, (byte)Command.CIS_COMMAND_VERSION });
             sb.AppendLine($"System Control Version={b[2]}.{b[3]}, Interface Control Version={b[4]}.{b[5]}");
             sb.AppendLine(currentStatus?.ToString()??"Unknown status");
             return sb.ToString();
@@ -905,9 +915,9 @@ namespace DiscChanger.Models
                 }
                 else
                 {
-                    if (cmd == 0xCB)
+                    if (cmd == (byte)DiscChangerSonyBD.Command.TOC_DATA_NETWORK)
                     {
-                        byte[] ipTOCDataReq = new byte[] { PDC, 0xCB, 0, 0, 1, (byte)(expectedIPPacketNum >> 8), (byte)(expectedIPPacketNum & 0xFF) };
+                        byte[] ipTOCDataReq = new byte[] { PDC, cmd, 0, 0, 1, (byte)(expectedIPPacketNum >> 8), (byte)(expectedIPPacketNum & 0xFF) };
                         SendCommand(ipTOCDataReq);
                     }
                     b = ReadNextPacketOfType(cmd);
@@ -920,7 +930,7 @@ namespace DiscChanger.Models
                     throw new Exception($"Unexpected TOC packet disc number {packetDiscNumber} vs. expected {discNumber}");
                 byte titleNumber = b[4];
                 int offset = 0;
-                if (cmd == 0xCB)
+                if (cmd == (byte)DiscChangerSonyBD.Command.TOC_DATA_NETWORK)
                 {
                     int dataPacketNum = ((b[5] << 8) | b[6]);
                     if (titleNumber != 1)//Data Type "0x00 : Information of IP_TOC_DATA 0x01 : Data of IP_TOC_DATA"							
@@ -976,12 +986,12 @@ namespace DiscChanger.Models
         }
         internal virtual bool processPacket(byte[] b)
         {
-            byte cmd = b[1];
+            DiscChangerSony.Command cmd = (DiscChangerSony.Command)b[1];
             int? discNumber = b.Length>=4?FromBCD(b[2], b[3]):null;
             string discNumberString = discNumber?.ToString();
             switch (cmd)
             {
-                case 0x82://STATUS_DATA
+                case DiscChangerSony.Command.STATUS_DATA:
                     Status newStatus = new Status();
                     newStatus.discNumber = discNumber;
                     newStatus.titleAlbumNumber = FromBCD(b[4], b[5]);
@@ -1003,7 +1013,7 @@ namespace DiscChanger.Models
                                                        currentStatus.statusString,
                                                        currentStatus.modeDisc);
                     break;
-                case 0x8A://DISC_DATA
+                case DiscChangerSony.Command.DISC_DATA:
                     DiscSony.Data dd = new DiscSony.Data();
                     byte discTypeByte = b[4];
                     dd.DiscType = DiscSony.discType2String[discTypeByte];
@@ -1020,10 +1030,10 @@ namespace DiscChanger.Models
                         ((DiscSony)newDisc).DiscData = dd;
                     }
                     break;
-                case 0x8B://TOC_DATA
+                case DiscChangerSony.Command.TOC_DATA:
                     if (discNumber.HasValue)
                     {
-                        DiscSony.TOC toc = receiveTOC(discNumber.Value, cmd, b);
+                        DiscSony.TOC toc = receiveTOC(discNumber.Value, (byte)cmd, b);
 
                         if (newDisc == null || newDisc.Slot != discNumberString || (newDisc as DiscSony)?.TableOfContents != null)
                             newDisc = createDisc(discNumberString);
@@ -1116,7 +1126,7 @@ namespace DiscChanger.Models
         }
         public override void InitiateStatusUpdate()
         {
-            SendCommand(new byte[] { PDC, 0x82 }, false);
+            SendCommand(new byte[] { PDC, (byte)Command.STATUS_DATA }, false);
         }
         static protected TimeSpan PowerTimeSpan = TimeSpan.FromMilliseconds(200);
         public override async Task<string> Control(string command)
@@ -1344,9 +1354,15 @@ namespace DiscChanger.Models
     public class DiscChangerSonyBD : DiscChangerSony
     {
         public const string BDP_CX7000ES = "Sony BDP-CX7000ES";
+        public new enum Command: byte
+        {
+            DISC_INFORMATION = 0x8D,
+            ID_DATA_SERIAL = 0x8E,
+            TOC_DATA_NETWORK = 0xCB,
+            DISC_EXIST_BIT_NETWORK = 0xCC,
+            ID_DATA_NETWORK = 0xCE
+        };
 
-        //public static readonly Dictionary<string, byte> CommandMode2PDC = new Dictionary<string, byte> { { "BD1", (byte)0x80 }, { "BD2", (byte)0x81 }, { "BD3", (byte)0x82 } };
-        //public static readonly Dictionary<string, byte> CommandMode2ResponsePDC = new Dictionary<string, byte> { { "BD1", (byte)0x88 }, { "BD2", (byte)0x89 }, { "BD3", (byte)0x8A } };
         public static readonly string[] CommandModes = new string[] { "BD1", "BD2", "BD3" };
         public static readonly Dictionary<string, byte> CommandMode2PDC = new Dictionary<string, byte>(Enumerable.Zip(CommandModes, Enumerable.Range(0x80, CommandModes.Length), (m, pdc) => new KeyValuePair<string, byte>(m, (byte)pdc)));
         public static readonly Dictionary<string, byte> CommandMode2ResponsePDC = new Dictionary<string, byte>(Enumerable.Zip(CommandModes, Enumerable.Range(0x88, CommandModes.Length), (m, pdc) => new KeyValuePair<string, byte>(m, (byte)pdc)));
@@ -1396,7 +1412,7 @@ namespace DiscChanger.Models
                 } 
                 else
                 {
-                    if(cmd==0xCE)
+                    if(cmd == (byte)DiscChangerSonyBD.Command.ID_DATA_NETWORK)
                         SendCommand(new byte[] { PDC, cmd, 0, 0, desiredDataType, (byte)(packetCounter >> 8), (byte)(packetCounter & 0xFF) });
                     b = ReadNextPacketOfType(cmd);
                 }
@@ -1441,12 +1457,13 @@ namespace DiscChanger.Models
         }
         int GetIPDiscIDPacketCount(int desiredDiscNumber, DiscSonyBD.IDData.DataTypeNetwork dataType)
         {
-            SendCommand(new byte[] { PDC, 0xCE, 0, 0, (byte)dataType, 0, 0 });
+            const byte cmd = (byte)DiscChangerSonyBD.Command.ID_DATA_NETWORK;
+            SendCommand(new byte[] { PDC, cmd, 0, 0, (byte)dataType, 0, 0 });
 
 
-            byte[] b = ReadNextPacketOfType(0xCE); ;
+            byte[] b = ReadNextPacketOfType(cmd);
             if (b == null)
-                throw new Exception($"No 0xCE packet response to IP Disc ID Packet count query disc {desiredDiscNumber}, data type: {dataType}");
+                throw new Exception($"No matching packet response to IP Disc ID Packet count query disc {desiredDiscNumber}, data type: {dataType}");
             int packetCount = ParseNetworkDiscIDPacketCount(b, out int discNumber, out DiscSonyBD.IDData.DataTypeNetwork responseDataType);
             if ( discNumber != desiredDiscNumber)
                 throw new Exception($"Received IP Disc ID packet count response disc number {discNumber} instead of {desiredDiscNumber}");
@@ -1458,13 +1475,13 @@ namespace DiscChanger.Models
 
         internal override bool processPacket(byte[] b)
         {
-            byte cmd = b[1];
+            DiscChangerSonyBD.Command cmd = (DiscChangerSonyBD.Command)b[1];
             int? discNumber = b.Length >= 4 ? FromBCD(b[2], b[3]) : null;
             string discNumberString = discNumber?.ToString();
             DiscSonyBD newDiscBD = newDisc as DiscSonyBD;
             switch (cmd)
             {
-                case 0x8D://DISC_INFORMATION
+                case DiscChangerSonyBD.Command.DISC_INFORMATION:
                     string s = parseDiscInformationPacket(b, out int? _, out string discTypeString, out int titleTrackNumber, out DiscSonyBD.Information.DataType discInfoType);
                     if (discNumber.HasValue )
                     {
@@ -1480,11 +1497,11 @@ namespace DiscChanger.Models
                         newDiscBD.DiscInformation = di;
                     }
                     return true;
-                case 0x8E://ID_DATA Serial
+                case DiscChangerSonyBD.Command.ID_DATA_SERIAL:
                     if (newDiscBD == null) throw new Exception("Not processing new disc");
                     DiscSonyBD.IDData.DataTypeSerial idDataType = (DiscSonyBD.IDData.DataTypeSerial)b[4];
 
-                    var id = ReadIDResponse(Int32.Parse(newDiscBD.Slot), (byte)idDataType, cmd, 0, b);
+                    var id = ReadIDResponse(Int32.Parse(newDiscBD.Slot), (byte)idDataType, (byte)cmd, 0, b);
                     if (id != null)
                     {
                         DiscSonyBD.IDData idData = newDiscBD.DiscIDData ?? new DiscSonyBD.IDData();
@@ -1498,7 +1515,7 @@ namespace DiscChanger.Models
                         newDiscBD.DiscIDData = idData;
                     }
                     return true;
-                case 0xCE://ID_DATA Network
+                case DiscChangerSonyBD.Command.ID_DATA_NETWORK:
                     if (newDiscBD == null) throw new Exception("Not processing new disc");
                     int packetCount = ParseNetworkDiscIDPacketCount(b, out int networkDiscNumber, out DiscSonyBD.IDData.DataTypeNetwork networkDataType);
                     if (packetCount>0 && Int32.Parse(newDiscBD.Slot)==networkDiscNumber)
@@ -1514,8 +1531,8 @@ namespace DiscChanger.Models
                         newDiscBD.DiscIDData = idData;
                     }
                     return true;
-                case 0xCB://IP_TOC_DATA
-                    if (b[0] != ResponsePDC || b[1] != cmd)
+                case DiscChangerSonyBD.Command.TOC_DATA_NETWORK:
+                    if (b[0] != ResponsePDC)
                         throw new Exception($"Unexpected IP_TOC_DATA packet {b[0]} {b[1]}");
                     byte dataType = b[4];
                     if (dataType == 0)//Data Type "0x00 : Information of IP_TOC_DATA 0x01 : Data of IP_TOC_DATA"							
@@ -1554,8 +1571,9 @@ namespace DiscChanger.Models
         {
             byte trackL = (byte)(track & 0xFF);
             byte trackH = (byte)(track >> 8);
-            SendCommand(new byte[] { PDC, 0x8D, 0, 0, (byte)dataType, trackH, trackL });
-            byte[] b = ReadNextPacketOfType(0x8D);
+            const byte cmd = (byte)DiscChangerSonyBD.Command.DISC_INFORMATION;
+            SendCommand(new byte[] { PDC, cmd, 0, 0, (byte)dataType, trackH, trackL });
+            byte[] b = ReadNextPacketOfType(cmd);
             if (b == null)
                 return null;
             string s = parseDiscInformationPacket(b, out int? discNumber, out string discType, out int titleTrackNumber, out DiscSonyBD.Information.DataType dataTypeResult);
@@ -1574,7 +1592,7 @@ namespace DiscChanger.Models
                 newDiscBD.TableOfContents.Titles == null&&
                 this.networkSocket != null)
             {
-                newDiscBD.TableOfContents = receiveTOC(discNumber, 0xCB, null);
+                newDiscBD.TableOfContents = receiveTOC(discNumber, (byte)DiscChangerSonyBD.Command.TOC_DATA_NETWORK, null);
             }
 
             var di = newDiscBD.DiscInformation;
@@ -1611,13 +1629,13 @@ namespace DiscChanger.Models
                 if (this.serialPort != null)
                 {
                     dataType = (byte)DiscSonyBD.IDData.DataTypeSerial.GraceNoteDiscID;
-                    cmd = 0x8E; firstPacketNumber = 0;
+                    cmd = (byte)Command.ID_DATA_SERIAL; firstPacketNumber = 0;
                     SendCommand(new byte[] { PDC, cmd, 0, 0, dataType });
                 }
                 else if (this.networkSocket != null)
                 {
                     dataType = (byte)DiscSonyBD.IDData.DataTypeNetwork.GraceNoteDiscID;
-                    cmd = 0xCE; firstPacketNumber = 1;
+                    cmd = (byte)Command.ID_DATA_NETWORK; firstPacketNumber = 1;
 
                     //int packetCount = id.GraceNoteDiscIDPacketCount;
                     //if (packetCount == 0)
@@ -1638,13 +1656,13 @@ namespace DiscChanger.Models
                 if (this.serialPort != null)
                 {
                     dataType = (byte)DiscSonyBD.IDData.DataTypeSerial.AACSDiscID;
-                    cmd = 0x8E; firstPacketNumber = 0;
+                    cmd = (byte)Command.ID_DATA_SERIAL; firstPacketNumber = 0;
                     SendCommand(new byte[] { PDC, cmd, 0, 0, dataType });
                 }
                 else if (this.networkSocket != null)
                 {
                     dataType = (byte)DiscSonyBD.IDData.DataTypeNetwork.AACSDiscID;
-                    cmd = 0xCE; firstPacketNumber = 1;
+                    cmd = (byte)Command.ID_DATA_NETWORK; firstPacketNumber = 1;
                     //int packetCount = id.AACSDiscIDPacketCount;
                     //if (packetCount == 0)
                     //    packetCount = GetIPDiscIDPacketCount(discNumber, DiscSonyBD.IDData.DataTypeNetwork.AACSDiscID_Info);
