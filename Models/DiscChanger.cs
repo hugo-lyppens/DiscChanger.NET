@@ -382,6 +382,9 @@ namespace DiscChanger.Models
     {
         public enum Command : byte
         {
+            DISC_DIRECT_SET = 0x4A,
+            POWER_SET = 0x60,
+            BROADCAST_MODE_SET = 0x62,
             CIS_COMMAND_VERSION = 0x80,
             STATUS_DATA=0x82,
             DISC_EXIST_BIT=0x8C,
@@ -1116,7 +1119,7 @@ namespace DiscChanger.Models
             {
                 ClearStatus();
                 OpenConnection();
-                await ProcessAckCommandAsync(new byte[] { PDC, 0x62, 0x02 });
+                await ProcessAckCommandAsync(new byte[] { PDC, (byte)Command.BROADCAST_MODE_SET, 0x02 });
                 InitiateStatusUpdate();
             }
             catch(Exception e)
@@ -1136,7 +1139,7 @@ namespace DiscChanger.Models
                 if (CurrentConnection() == null)
                     OpenConnection();
                 byte desiredState = command == "power_on" || (command == "power" && (currentStatus==null||currentStatus.status == 0)) ? (byte)1 : (byte)0;
-                var powerCommand = new byte[] { PDC, 0x60, desiredState };
+                var powerCommand = new byte[] { PDC, (byte)Command.POWER_SET, desiredState };
                 int iterations = desiredState * 9 + 1;
                 int i;
                 bool success = false;
@@ -1175,7 +1178,7 @@ namespace DiscChanger.Models
                     {
                         try
                         {
-                            ack = await ProcessAckCommandAsync(new byte[] { PDC, 0x62, 0x02 });
+                            ack = await ProcessAckCommandAsync(new byte[] { PDC, (byte)Command.BROADCAST_MODE_SET, 0x02 });
                             await Task.Delay(2000);
                         }
                         catch { }
@@ -1210,7 +1213,7 @@ namespace DiscChanger.Models
                 chapterNumberH = 0; chapterNumberL = 0;
             }
             //            byte control = pause? 0x01:0x00;//Play, 0x01 for pause
-            var discDirectSetCommand = new byte[] { PDC, 0x4A, discNumberH, discNumberL, trackTitleNumberH, trackTitleNumberL, chapterNumberH, chapterNumberL, control };
+            var discDirectSetCommand = new byte[] { PDC, (byte)Command.DISC_DIRECT_SET, discNumberH, discNumberL, trackTitleNumberH, trackTitleNumberL, chapterNumberH, chapterNumberL, control };
             bool result = await ProcessAckCommandAsync(discDirectSetCommand);
             if (result)
             {
@@ -1229,6 +1232,10 @@ namespace DiscChanger.Models
     public class DiscChangerSonyDVD : DiscChangerSony
     {
         public const string DVP_CX777ES = "Sony DVP-CX777ES";
+        public new enum Command : byte
+        {
+            TEXT_DATA = 0x90
+        };
 
         public DiscChangerSonyDVD(string type) 
         {
@@ -1261,12 +1268,12 @@ namespace DiscChanger.Models
 
         internal override bool processPacket(byte[] b)
         {
-            byte cmd = b[1];
+            Command cmd = (Command)b[1];
             int? discNumber = b.Length >= 4 ? FromBCD(b[2], b[3]) : null;
             string discNumberString = discNumber?.ToString();
             switch (cmd)
             {
-                case 0x90://TEXT_DATA
+                case Command.TEXT_DATA:
                     int? titleTrackNumber = FromBCD(b[4]); //reserved 0x00
                     byte type = b[5]; //reserved 0x00
                     string characterSet = DiscSonyDVD.characterCodeSet2String[b[8]];
