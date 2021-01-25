@@ -145,6 +145,7 @@ namespace DiscChanger.Models
                         DiscChanger dc = d.DiscChanger;
                         try
                         {
+                            System.Diagnostics.Debug.WriteLine($"About to Lookup {dc.Key} {d.Slot}");
                             MusicBrainz.Data mbd = discLookup.Lookup(d);
                             d.LookupData = mbd;
                             d.DateTimeAdded ??= DateTime.Now;
@@ -158,6 +159,7 @@ namespace DiscChanger.Models
                         }
                         catch (Exception e)
                         {
+                            System.Diagnostics.Debug.WriteLine($"Lookup failed {dc.Key} {d.Slot}: {e.Message}" );
                             _logger.LogInformation(e, "Lookup failed {Key} {Slot}", dc.Key, d.Slot);
                         }
                     }
