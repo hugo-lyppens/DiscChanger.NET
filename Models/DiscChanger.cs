@@ -32,6 +32,7 @@ using System.Threading.Tasks.Dataflow;
 using System.Text.Json.Serialization;
 using System.Net.Sockets;
 using System.Net;
+using System.Globalization;
 
 namespace DiscChanger.Models
 {
@@ -1335,8 +1336,9 @@ namespace DiscChanger.Models
                                 existingDiscDVD.TableOfContents?.TitleFrames != null &&
                                 existingDiscDVD.TableOfContents.TitleFrames.ContainsKey("CD") &&
                                 dd.TrackCount() >= existingDiscDVD.TableOfContents.TitleFrames["CD"].Length &&
-                                (String.IsNullOrEmpty(existingDiscDVD.DiscText.TextString) || existingDiscDVD.DiscText.TextString == newDiscDVD.DiscText.TextString )
-)                           {
+                                (String.IsNullOrEmpty(existingDiscDVD.DiscText.TextString) || 
+                                 String.Compare(existingDiscDVD.DiscText.TextString, newDiscDVD.DiscText.TextString, CultureInfo.CurrentCulture, CompareOptions.IgnoreCase | CompareOptions.IgnoreSymbols )==0))
+                            {
                                 newDiscDVD.DateTimeAdded   = existingDiscDVD.DateTimeAdded; //preserve datetime from existing
                                 var toc = existingDiscDVD.TableOfContents;
                                 if(toc.Source==null)
