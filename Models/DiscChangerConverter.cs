@@ -59,7 +59,9 @@ namespace DiscChanger.Models
                             }
                             break;
                         default:
-                            if( reader.TokenType!=JsonTokenType.Null)
+                            if (reader.TokenType == JsonTokenType.String)
+                                propertyValues.Add(propertyName, reader.GetString());
+                            else if (reader.TokenType != JsonTokenType.Null)
                                 propertyValues.Add(propertyName, reader.GetObject(options));
                             break;
                     }
