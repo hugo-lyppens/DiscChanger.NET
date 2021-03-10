@@ -6,7 +6,7 @@ Uses ASP.NET Core in .NET 5. Manages any number of disc changers. At the moment 
 
 I've tested it on a Raspberry Pi 4, which can control as many changers as it has serial ports. It has 5 real UARTs (#0, #2-#5) and a mini UART. Using the real UARTs (be sure to use proper 3.3V-RS232 adapters preferably with hardware flow control CTS/RTS), one Raspberry Pi 4 could control 5 changers! <a href="https://www.raspberrypi.org/documentation/configuration/uart.md">Information on Raspberry Pi UARTs (serial ports)</a>.
 
-And on Windows, it runs in IIS with the .NET 5.0 runtime (hosting bundle) installed, or from the command line using the dotnet command. MacOS is also supported by .NET 5.0.
+And on Windows, it runs in IIS with the .NET 5.0 runtime (hosting bundle) installed, or from the command line using the dotnet command. MacOS is also supported by .NET 5.0. In IIS, I have had good results by setting 'Preload Enabled' to true in the DiscChanger.NET site Advanced Settings as well as 'Start Mode' to 'AlwaysRunning' in the DiscChanger.NET application pool's Advanced Settings.
 
 You can scan all or a subset of the discs in the changer to populate the display. Also, when the changer loads a disc, it checks to see whether it is a known disc. If not, DiscChanger.NET will look it up and show it on the grid without reloading the page. By clicking on a music CD, you get a <a href="doc/DiscChanger.NET Popover audio tracks and links.png">popover</a> showing listing of tracks as well as web links known to MusicBrainz pertaining to the disc.
 
