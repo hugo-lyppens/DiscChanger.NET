@@ -166,6 +166,38 @@ function deleteChanger(key, name) {
     }
 }
 
+function shiftDiscs(key, name) {
+    var slotsSet = prompt("which set of discs to shift on " + name);
+    if (slotsSet) {
+        $.ajax({
+            url: '/?handler=PopulatedSlots',
+            data: {
+                changerKey: key,
+                slotsSet: slotsSet
+            }
+        }).done(function (populatedSlotsSet) {
+            var offset = parseInt(prompt("integer offset to shift discs in " + name + ", slots: " + populatedSlotsSet),10);
+            if (offset) {
+                $.ajax({
+                    url: '/?handler=ValidateDiscShift',
+                    data: {
+                        changerKey: key,
+                        slotsSet: populatedSlotsSet,
+                        offset: offset
+                    }
+                }).done(function (destinationSlotsSet) {
+                    if(confirm('Please confirm shifting discs on '+name+' from '+populatedSlotsSet+' to '+destinationSlotsSet))
+                    {
+                        connection.invoke("ShiftDiscs", key, populatedSlotsSet. offset).catch(function (err) {
+                            return console.error(err.toString());
+                        });
+                    }
+                });
+            }
+        });
+    }
+}
+
 function moveChanger(key, offset) {
     connection.invoke("MoveChanger", key, offset).catch(function (err) {
         return console.error(err.toString());

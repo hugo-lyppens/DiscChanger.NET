@@ -78,6 +78,7 @@
                                 </td>
                                 <td hidden class="config">
                                     <a hidden asp-page="DiscChangerConfig" asp-route-key="@key" title="Go to changer config page" class="config"><button id="edit_@key" class="btn config" type="button"><i class="fas fa-cog fa-lg"></i></button></a>
+                                    <button id="shift_discs_@key" class="btn config" type="button" title="Shift a set of discs to new position" onclick="return shiftDiscs('@key',&quot;@name&quot;)"><i class="fas fa-dolly fa-lg"></i></button>
                                     <button id="delete_@key" class="btn config" type="button" title="Delete disc changer" onclick="return deleteChanger('@key',&quot;@name&quot;)"><i class="fas fa-trash-alt fa-lg"></i></button>
                                     @if (dci > 0)
                                     {

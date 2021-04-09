@@ -58,6 +58,12 @@ namespace DiscChanger.Models
         public const string CONNECTION_NETWORK = "Network";
         public static readonly string[] ConnectionTypes = new string[] { CONNECTION_SERIAL_PORT, CONNECTION_NETWORK };
         public static readonly string[] ChangerTypes = new string[] { String.Empty, DiscChangerSonyDVD.DVP_CX777ES, DiscChangerSonyBD.BDP_CX7000ES };
+
+        internal string getPopulatedSlots(string slotsSet)
+        {
+            throw new NotImplementedException();
+        }
+
         protected object CurrentConnection() { return (object)serialPort ?? (object)networkSocket; }
         public virtual bool Connected()
         {
@@ -66,6 +72,11 @@ namespace DiscChanger.Models
             else if (networkSocket != null)
                 return networkSocket.Connected;
             return false;
+        }
+
+        internal string getDiscsShiftDestination(string populatedSlotsSet, int offset)
+        {
+            throw new NotImplementedException();
         }
 
         protected void DiscardInBuffer()

@@ -65,5 +65,35 @@ namespace DiscChanger.Pages
             }
             return new JsonResult(discSet);
         }
+        public JsonResult OnGetPopulatedSlots(string changerKey, string slotsSet)
+        {
+            string discSet;
+            try
+            {
+                discSet = discChangerService.Changer(changerKey).getPopulatedSlots(slotsSet);
+            }
+            catch (Exception e)
+            {
+                discSet = "";
+            }
+            return new JsonResult(discSet);
+        }
+
+        public JsonResult OnGetValidateDiscShift( string changerKey,
+                        string populatedSlotsSet,
+                        int offset)
+        {
+            string discSet;
+            try
+            {
+                discSet = discChangerService.Changer(changerKey).getDiscsShiftDestination(populatedSlotsSet, offset);
+            }
+            catch (Exception e)
+            {
+                discSet = "";
+            }
+            return new JsonResult(discSet);
+        }
+
     }
 }
