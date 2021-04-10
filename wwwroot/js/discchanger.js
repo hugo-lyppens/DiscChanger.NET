@@ -176,24 +176,31 @@ function shiftDiscs(key, name) {
                 slotsSet: slotsSet
             }
         }).done(function (populatedSlotsSet) {
-            var offset = parseInt(prompt("integer offset to shift discs in " + name + ", slots: " + populatedSlotsSet),10);
-            if (offset) {
-                $.ajax({
-                    url: '/?handler=ValidateDiscShift',
-                    data: {
-                        changerKey: key,
-                        slotsSet: populatedSlotsSet,
-                        offset: offset
-                    }
-                }).done(function (destinationSlotsSet) {
-                    if(confirm('Please confirm shifting discs on '+name+' from '+populatedSlotsSet+' to '+destinationSlotsSet))
-                    {
-                        connection.invoke("ShiftDiscs", key, populatedSlotsSet. offset).catch(function (err) {
-                            return console.error(err.toString());
-                        });
-                    }
-                });
+            if (!populatedSlotsSet) {
+                alert("Cancelled"); return;
             }
+            var offset = parseInt(prompt("integer offset to shift discs by in: " + name + ", slots: " + populatedSlotsSet),10);
+            if (!offset) {
+                alert("Cancelled"); return;
+            }
+            $.ajax({
+                url: '/?handler=ValidateDiscShift',
+                data: {
+                    changerKey: key,
+                    slotsSet: populatedSlotsSet,
+                    offset: offset
+                }
+            }).done(function (destinationSlotsSet) {
+                if (!destinationSlotsSet) {
+                    alert("Invalid disc shift request"); return;
+                }
+                if(confirm('Please confirm shifting discs on '+name+' from '+populatedSlotsSet+' to '+destinationSlotsSet))
+                {
+                    connection.invoke("ShiftDiscs", key, populatedSlotsSet, destinationSlotsSet).catch(function (err) {
+                        return console.error(err.toString());
+                    });
+                }
+            });
         });
     }
 }

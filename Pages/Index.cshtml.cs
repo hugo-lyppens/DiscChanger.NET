@@ -70,7 +70,7 @@ namespace DiscChanger.Pages
             string discSet;
             try
             {
-                discSet = discChangerService.Changer(changerKey).getPopulatedSlots(slotsSet);
+                discSet = discChangerService.Changer(changerKey).GetPopulatedSlots(slotsSet);
             }
             catch (Exception e)
             {
@@ -80,13 +80,13 @@ namespace DiscChanger.Pages
         }
 
         public JsonResult OnGetValidateDiscShift( string changerKey,
-                        string populatedSlotsSet,
+                        string slotsSet,
                         int offset)
         {
             string discSet;
             try
             {
-                discSet = discChangerService.Changer(changerKey).getDiscsShiftDestination(populatedSlotsSet, offset);
+                discSet = discChangerService.Changer(changerKey).GetDiscsShiftDestination(slotsSet, offset);
             }
             catch (Exception e)
             {

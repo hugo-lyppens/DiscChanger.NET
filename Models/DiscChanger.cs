@@ -59,10 +59,6 @@ namespace DiscChanger.Models
         public static readonly string[] ConnectionTypes = new string[] { CONNECTION_SERIAL_PORT, CONNECTION_NETWORK };
         public static readonly string[] ChangerTypes = new string[] { String.Empty, DiscChangerSonyDVD.DVP_CX777ES, DiscChangerSonyBD.BDP_CX7000ES };
 
-        internal string getPopulatedSlots(string slotsSet)
-        {
-            throw new NotImplementedException();
-        }
 
         protected object CurrentConnection() { return (object)serialPort ?? (object)networkSocket; }
         public virtual bool Connected()
@@ -73,12 +69,6 @@ namespace DiscChanger.Models
                 return networkSocket.Connected;
             return false;
         }
-
-        internal string getDiscsShiftDestination(string populatedSlotsSet, int offset)
-        {
-            throw new NotImplementedException();
-        }
-
         protected void DiscardInBuffer()
         {
             if (serialPort != null)
@@ -86,7 +76,7 @@ namespace DiscChanger.Models
             else if (networkSocket != null)
             {
                 int a;
-                while((a=networkSocket.Available)>0)
+                while ((a = networkSocket.Available) > 0)
                     networkSocket.Receive(new byte[a]);
             }
             else
@@ -98,7 +88,7 @@ namespace DiscChanger.Models
             if (serialPort != null)
             {
                 int i = serialPort.ReadByte();
-                if(i==-1)
+                if (i == -1)
                     throw new Exception("Serial Port ReadByte returned -1");
                 return (byte)i;
             }
@@ -125,8 +115,8 @@ namespace DiscChanger.Models
                 serialPort.Write(buffer, offset, size);
             else if (networkSocket != null)
             {
-                int sent=networkSocket.Send(buffer, offset, size, SocketFlags.None);
-                if(sent!=size)
+                int sent = networkSocket.Send(buffer, offset, size, SocketFlags.None);
+                if (sent != size)
                     throw new Exception($"Socket.Send returned {sent} instead of {size}");
             }
             else
@@ -147,7 +137,7 @@ namespace DiscChanger.Models
         }
 
         internal abstract Type getDiscType();
-        internal abstract Disc createDisc(string slot=null);
+        internal abstract Disc createDisc(string slot = null);
 
         internal void setDisc(string slot, Disc d)
         {
@@ -277,7 +267,54 @@ namespace DiscChanger.Models
             await hubContext.Clients.All.SendAsync("Reload");
         }
 
-        public static  string toSetString(BitArray discExistBitArray)
+        internal async Task ShiftDiscs(string sourceSlotsSetString, string destinationSlotsSetString)
+        {
+            var sourceSlotsSet = ParseSet(sourceSlotsSetString);
+            var destinationSlotsSet = ParseSet(destinationSlotsSetString);
+            var sourceSlotsSetCount = sourceSlotsSet.Count();
+            var destinationSlotsSetCount = destinationSlotsSet.Count();
+            if (sourceSlotsSetCount != destinationSlotsSetCount)
+                throw new Exception($"{sourceSlotsSetString} count ({sourceSlotsSetCount})!={destinationSlotsSetString} count ({destinationSlotsSetCount})");
+            if (ScanCancellationTokenSource != null)
+                throw new Exception("There is a scan in progress on " + this.Key);
+            lock (this.Discs)
+            {
+                var movedDiscs = sourceSlotsSet.Zip(destinationSlotsSet, (src, dst) =>
+                {
+                    this.Discs.TryRemove(src.ToString(), out Disc d);
+                    var newSlot = dst.ToString();
+                    d.Slot = newSlot;
+                    return KeyValuePair.Create(newSlot, d);
+                }).ToArray();//force it to execute
+                foreach (var movedDisc in movedDiscs)
+                {
+                    if (!this.Discs.TryAdd(movedDisc.Key, movedDisc.Value))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Changer {Name} trouble reinserting moved disc in slot {movedDisc.Key}");
+                    }
+                }
+            }
+            this.discChangerService.needsSaving = true;
+            await hubContext.Clients.All.SendAsync("Reload");
+        }
+
+        internal string GetPopulatedSlots(string slotsSet)
+        {
+            return toSetString(ParseSet(slotsSet).Where(i => Discs.ContainsKey(i.ToString())));
+        }
+
+        internal string GetDiscsShiftDestination(string populatedSlotsSetString, int offset)
+        {
+            var src = ParseSet(populatedSlotsSetString);
+            var dst = src.Select(i => i + offset);
+            var e = dst.Except(src);
+            bool invalid = e.Any(i => { var s = i.ToString(); return !ValidSlot(s) || Discs.ContainsKey(s); });
+            return !invalid ? toSetString(dst) : null;
+        }
+
+        protected abstract bool ValidSlot(string s);
+
+        public static string toSetString(BitArray discExistBitArray)
         {
             StringBuilder sb = new StringBuilder();
             int l = discExistBitArray.Length;
@@ -305,6 +342,49 @@ namespace DiscChanger.Models
             }
             return sb.ToString();
         }
+        public static string toSetString(IEnumerable<int> list) //requires ascending order
+        {
+            StringBuilder sb = new StringBuilder();
+            int? start = null;
+            int? end = null;
+            foreach (int i in list)
+            {
+                if (start is null)
+                {
+                    start = i; end = i;
+                }
+                else
+                {
+                    if (end + 1 == i)
+                        end = i;
+                    else
+                    {
+                        if (sb.Length > 0)
+                            sb.Append(',');
+                        sb.Append(start);
+                        if (end > start)
+                        {
+                            sb.Append('-');
+                            sb.Append(end);
+                        }
+                        start = i; end = i;
+                    }
+                }
+            }
+            if (start is not null)
+            {
+                if (sb.Length > 0)
+                    sb.Append(',');
+                sb.Append(start);
+                if (end > start)
+                {
+                    sb.Append('-');
+                    sb.Append(end);
+                }
+            }
+            return sb.ToString();
+        }
+
         public abstract Task<string> Control(string command);
 
         public virtual bool SupportsCommand(string command)
@@ -330,7 +410,7 @@ namespace DiscChanger.Models
         {
             static TimeSpan StatusTimeSpan = TimeSpan.FromMinutes(2);
             private DateTime timeStamp = DateTime.Now;
-            public bool IsOutDated() { return DateTime.Now - timeStamp >StatusTimeSpan; }
+            public bool IsOutDated() { return DateTime.Now - timeStamp > StatusTimeSpan; }
             public int? discNumber;
             public int? titleAlbumNumber;
             public int? chapterTrackNumber;
@@ -353,18 +433,18 @@ namespace DiscChanger.Models
         }
         public virtual void ClearStatus()
         {
-            currentStatus=null;
+            currentStatus = null;
         }
 
         public static string GetBytesToString(byte[] value)
         {
-            return value!=null?BitConverter.ToString(value):"null";
+            return value != null ? BitConverter.ToString(value) : "null";
         }
 
         protected BufferBlock<string> bufferBlockDiscSlot;
         protected bool disposedValue;
 
-        
+
 
         public abstract Task Connect();
         public abstract Task Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger);
@@ -398,12 +478,19 @@ namespace DiscChanger.Models
             POWER_SET = 0x60,
             BROADCAST_MODE_SET = 0x62,
             CIS_COMMAND_VERSION = 0x80,
-            STATUS_DATA=0x82,
-            DISC_EXIST_BIT=0x8C,
+            STATUS_DATA = 0x82,
+            DISC_EXIST_BIT = 0x8C,
             DISC_DATA = 0x8A,
             TOC_DATA = 0x8B,
             MODEL_NAME = 0xA0
-        }; 
+        };
+        public const int SlotCount = 400;
+        public const int BitsPerByte = 8;
+        public const int SlotBytes = SlotCount / BitsPerByte;
+        protected override bool ValidSlot(string slotString) //allow non-numeric slots, perhaps rental slot, for future enhancements
+        {
+            return Int32.TryParse(slotString, out int slot) && slot >= 1 && slot <= SlotCount;
+        }
 
         public bool AdjustLastTrackLength { get; set; } = true;
         public bool ReverseDiscExistBytes { get; set; } = false;
@@ -454,22 +541,22 @@ namespace DiscChanger.Models
         internal override BitArray getDiscsPresent()
         {
             byte cmd;
-            byte[] discExistBitReq=null;
+            byte[] discExistBitReq = null;
             if (this.networkSocket != null)
             {
                 cmd = (byte)DiscChangerSonyBD.Command.DISC_EXIST_BIT_NETWORK;
                 discExistBitReq = new byte[] { PDC, cmd, 0 };
             }
             else
-            { 
+            {
                 cmd = (byte)Command.DISC_EXIST_BIT;
                 SendCommand(new byte[] { PDC, cmd });
             }
-            List<byte> discExistBit = new List<byte>(50);
+            List<byte> discExistBit = new List<byte>(SlotBytes);
             byte[] b; byte count = 0;
             do
             {
-                if (discExistBitReq != null) 
+                if (discExistBitReq != null)
                 {
                     discExistBitReq[2] = count;
                     SendCommand(discExistBitReq);
@@ -547,7 +634,7 @@ namespace DiscChanger.Models
             sb.Append("Model name="); sb.AppendLine(modelName);
             b = await ProcessPacketCommandAsync(new byte[] { PDC, (byte)Command.CIS_COMMAND_VERSION });
             sb.AppendLine($"System Control Version={b[2]}.{b[3]}, Interface Control Version={b[4]}.{b[5]}");
-            sb.AppendLine(currentStatus?.ToString()??"Unknown status");
+            sb.AppendLine(currentStatus?.ToString() ?? "Unknown status");
             return sb.ToString();
         }
 
@@ -607,7 +694,7 @@ namespace DiscChanger.Models
                 WriteBytes(combined, 0, combined.Length);
             }
         }
-        
+
         internal byte[] ReadPacketData()
         {
             int l = ReadByte();
@@ -640,7 +727,7 @@ namespace DiscChanger.Models
             {
                 b = ReadByteOrPacket();
                 if (b == null) throw new Exception("Timeout while retrieving disc information, abandoning");
-                if (b[0] == ResponsePDC && b.Length >= 2 && b[1] == 0x0E) 
+                if (b[0] == ResponsePDC && b.Length >= 2 && b[1] == 0x0E)
                     return null; // BD player recognized the request but cannot execute it
                 found = b[0] == ResponsePDC && b.Length >= 2 && b[1] == cmd;
                 if (!found && !processPacket(b))
@@ -661,7 +748,7 @@ namespace DiscChanger.Models
             }
         }
 
-  
+
         private async Task<byte[]> ProcessPacketCommandAsync(byte[] command)
         {
             SendCommand(command);
@@ -672,10 +759,10 @@ namespace DiscChanger.Models
                 {
                     b = await responses.ReceiveAsync(CommandTimeOut);
                 }
-                catch (TimeoutException) { b=null; }
+                catch (TimeoutException) { b = null; }
                 count++;
             }
-            while (count < 10&&(b==null||b.Length < 2 || b[0] != this.ResponsePDC || b[1] != command[1]) );
+            while (count < 10 && (b == null || b.Length < 2 || b[0] != this.ResponsePDC || b[1] != command[1]));
             if (count == 10)
             {
                 string err = "Did not get response to packet command: " + GetBytesToString(command);
@@ -698,7 +785,7 @@ namespace DiscChanger.Models
                 catch (TimeoutException) { b = null; }
                 count++;
             }
-            while (count < 10 && (b == null || b.Length !=1));
+            while (count < 10 && (b == null || b.Length != 1));
             if (count == 10)
             {
                 string err = "Did not get response to ack command: " + GetBytesToString(command);
@@ -812,17 +899,17 @@ namespace DiscChanger.Models
                         byte startByte = networkBuffer[0];
                         if (startByte != 2)
                             responses.Post(new byte[1] { startByte });
-                        else if(networkSocket != null && networkSocket.Connected)
+                        else if (networkSocket != null && networkSocket.Connected)
                         {
                             byte[] b = ReadPacketData();
                             HandlePacket(b);
                         }
-                    } while (networkSocket != null && networkSocket.Connected&&networkSocket.Available >= 1 && networkSocket.Receive(networkBuffer, 0, 1, SocketFlags.None) == 1);
+                    } while (networkSocket != null && networkSocket.Connected && networkSocket.Available >= 1 && networkSocket.Receive(networkBuffer, 0, 1, SocketFlags.None) == 1);
                     if (networkSocket != null && networkSocket.Connected)
                         networkSocket.BeginReceive(networkBuffer, 0, NetworkBufferSize, 0, new AsyncCallback(NetworkReceiveCallback), networkSocket);
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 System.Diagnostics.Debug.WriteLine($"NetworkReceiveCallback exception {e.Message} in disc changer {Name}");
             }
@@ -836,7 +923,7 @@ namespace DiscChanger.Models
             lock (sp)
             {
                 int btr;
-                while ((btr=sp.BytesToRead) > 0)
+                while ((btr = sp.BytesToRead) > 0)
                 {
                     System.Diagnostics.Debug.Write($"about to read {btr}");
                     byte[] b = ReadByteOrPacket();
@@ -879,7 +966,7 @@ namespace DiscChanger.Models
                         {
                             System.Diagnostics.Debug.WriteLine("No serial port packets forthcoming for new disc slot: " + newDisc.Slot);
                         }
-                        catch(SocketException e)
+                        catch (SocketException e)
                         {
                             if (e.SocketErrorCode != SocketError.TimedOut)
                                 throw;
@@ -1002,7 +1089,7 @@ namespace DiscChanger.Models
         internal virtual bool processPacket(byte[] b)
         {
             DiscChangerSony.Command cmd = (DiscChangerSony.Command)b[1];
-            int? discNumber = b.Length>=4?FromBCD(b[2], b[3]):null;
+            int? discNumber = b.Length >= 4 ? FromBCD(b[2], b[3]) : null;
             string discNumberString = discNumber?.ToString();
             switch (cmd)
             {
@@ -1038,7 +1125,7 @@ namespace DiscChanger.Models
                     dd.HasText = (b[9] & 16) != 0;
                     string msg4 = "DiscData: " + (discNumber ?? -1) + "/" + (dd.StartTrackTitleAlbum ?? -1) + "/" + (dd.LastTrackTitleAlbum ?? -1) + ":" + dd.DiscType + "," + Convert.ToString(b[9], 2);
                     System.Diagnostics.Debug.WriteLine(msg4);
-                    if (discNumber.HasValue&&discTypeByte!=0xFF)
+                    if (discNumber.HasValue && discTypeByte != 0xFF)
                     {
                         if (newDisc == null || newDisc.Slot != discNumberString || (newDisc as DiscSony)?.DiscData != null)
                             newDisc = createDisc(discNumberString);
@@ -1101,7 +1188,7 @@ namespace DiscChanger.Models
                     try
                     {
                         networkSocket = new Socket(AddressFamily.InterNetwork,
-                                                   SocketType.Stream, 
+                                                   SocketType.Stream,
                                                    ProtocolType.Tcp);
                         networkSocket.ReceiveTimeout = ReadTimeout;
                         networkSocket.SendTimeout = WriteTimeout;
@@ -1134,7 +1221,7 @@ namespace DiscChanger.Models
                 await ProcessAckCommandAsync(new byte[] { PDC, (byte)Command.BROADCAST_MODE_SET, 0x02 });
                 InitiateStatusUpdate();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 System.Diagnostics.Debug.WriteLine("Exception in Connect(): " + e.Message);
             }
@@ -1150,23 +1237,24 @@ namespace DiscChanger.Models
             {
                 if (CurrentConnection() == null)
                     OpenConnection();
-                byte desiredState = command == "power_on" || (command == "power" && (currentStatus==null||currentStatus.status == 0)) ? (byte)1 : (byte)0;
+                byte desiredState = command == "power_on" || (command == "power" && (currentStatus == null || currentStatus.status == 0)) ? (byte)1 : (byte)0;
                 var powerCommand = new byte[] { PDC, (byte)Command.POWER_SET, desiredState };
                 int iterations = desiredState * 9 + 1;
                 int i;
                 bool success = false;
                 System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
                 string r = null;
-                
+
                 for (i = 0; !success && i < iterations; i++)
                 {
                     SendCommand(powerCommand, i == 0);
                     sw.Start();
-                    try {
+                    try
+                    {
                         byte[] response = await responses.ReceiveAsync(PowerTimeSpan);
-                        if (response.Length > 1&&responses.TryReceiveAll(out IList<byte[]> l))
+                        if (response.Length > 1 && responses.TryReceiveAll(out IList<byte[]> l))
                         {
-                            System.Diagnostics.Debug.WriteLine($"{command} attempt: {i}, skipping large response packet & got {l.Count} packets" );
+                            System.Diagnostics.Debug.WriteLine($"{command} attempt: {i}, skipping large response packet & got {l.Count} packets");
                             response = l.First(p => p.Length == 1);
                         }
                         if (response.Length == 1)
@@ -1174,8 +1262,8 @@ namespace DiscChanger.Models
                             success = true; r = ack2String[response[0]];
                         }
                     }
-                    catch(InvalidOperationException) { }
-                    catch(TimeoutException) { }
+                    catch (InvalidOperationException) { }
+                    catch (TimeoutException) { }
                     sw.Stop();
                     System.Diagnostics.Debug.WriteLine(command + " attempt: " + i + ", ms:" + sw.ElapsedMilliseconds);
                 }
@@ -1237,7 +1325,7 @@ namespace DiscChanger.Models
                 }
                 catch (TimeoutException) { }
             }
-            return result;           
+            return result;
         }
     }
 
@@ -1249,7 +1337,7 @@ namespace DiscChanger.Models
             TEXT_DATA = 0x90
         };
 
-        public DiscChangerSonyDVD(string type) 
+        public DiscChangerSonyDVD(string type)
         {
             this.Type = type;
             this.ReverseDiscExistBytes = false;
@@ -1273,7 +1361,7 @@ namespace DiscChanger.Models
         {
             return typeof(DiscSonyDVD);
         }
-        internal override Disc createDisc(string slot=null)
+        internal override Disc createDisc(string slot = null)
         {
             return new DiscSonyDVD(slot);
         }
@@ -1295,7 +1383,7 @@ namespace DiscChanger.Models
                     do
                     {
                         byte packetNumber = b[9];
-                        if (packetNumber != expectedPacketNumber || b.Length<4||FromBCD(b[2], b[3]) != discNumber)
+                        if (packetNumber != expectedPacketNumber || b.Length < 4 || FromBCD(b[2], b[3]) != discNumber)
                         {
                             error = true; break;
                         }
@@ -1308,10 +1396,10 @@ namespace DiscChanger.Models
                             break;
                         }
                         text.AddRange(b.Skip(10));
-                        expectedPacketNumber++; b = ReadPacket(); 
+                        expectedPacketNumber++; b = ReadPacket();
                     }
                     while (!error);
-                    if(error)
+                    if (error)
                         throw new Exception("Error reading TEXT_DATA packets");
                     DiscSonyDVD.Text td = new DiscSonyDVD.Text();
                     string msg = "TEXT_DATA: " + discNumber;
@@ -1331,28 +1419,28 @@ namespace DiscChanger.Models
                     System.Diagnostics.Debug.WriteLine(msg);
                     if (discNumber.HasValue)
                     {
-                        if (newDisc != null && 
-                            newDisc.Slot == discNumberString && 
-                            newDisc is DiscSonyDVD newDiscDVD&&
+                        if (newDisc != null &&
+                            newDisc.Slot == discNumberString &&
+                            newDisc is DiscSonyDVD newDiscDVD &&
                             newDiscDVD.DiscText == null)
                         {
                             newDiscDVD.DiscText = td;
                             var dd = newDiscDVD.DiscData;
-                            if ( dd!=null&&dd.DiscType.StartsWith("SACD")&&
-                                Discs.TryGetValue(discNumberString, out Disc existingDisc)&&
+                            if (dd != null && dd.DiscType.StartsWith("SACD") &&
+                                Discs.TryGetValue(discNumberString, out Disc existingDisc) &&
                                 existingDisc is DiscSonyDVD existingDiscDVD &&
                                 existingDiscDVD.DiscData?.DiscType != null &&
-                                existingDiscDVD.DiscData.DiscType.StartsWith("SACD")&&
+                                existingDiscDVD.DiscData.DiscType.StartsWith("SACD") &&
                                 newDiscDVD.TableOfContents == null &&
                                 existingDiscDVD.TableOfContents?.TitleFrames != null &&
                                 existingDiscDVD.TableOfContents.TitleFrames.ContainsKey("CD") &&
                                 dd.TrackCount() >= existingDiscDVD.TableOfContents.TitleFrames["CD"].Length &&
-                                (String.IsNullOrEmpty(existingDiscDVD.DiscText.TextString) || 
-                                 String.Compare(existingDiscDVD.DiscText.TextString, newDiscDVD.DiscText.TextString, CultureInfo.CurrentCulture, CompareOptions.IgnoreCase | CompareOptions.IgnoreSymbols )==0))
+                                (String.IsNullOrEmpty(existingDiscDVD.DiscText.TextString) ||
+                                 String.Compare(existingDiscDVD.DiscText.TextString, newDiscDVD.DiscText.TextString, CultureInfo.CurrentCulture, CompareOptions.IgnoreCase | CompareOptions.IgnoreSymbols) == 0))
                             {
-                                newDiscDVD.DateTimeAdded   = existingDiscDVD.DateTimeAdded; //preserve datetime from existing
+                                newDiscDVD.DateTimeAdded = existingDiscDVD.DateTimeAdded; //preserve datetime from existing
                                 var toc = existingDiscDVD.TableOfContents;
-                                if(toc.Source==null)
+                                if (toc.Source == null)
                                 {
                                     toc = toc.ShallowCopy();
                                     toc.Source = existingDiscDVD.DiscData.DiscType;
@@ -1374,7 +1462,7 @@ namespace DiscChanger.Models
     public class DiscChangerSonyBD : DiscChangerSony
     {
         public const string BDP_CX7000ES = "Sony BDP-CX7000ES";
-        public new enum Command: byte
+        public new enum Command : byte
         {
             DISC_INFORMATION = 0x8D,
             ID_DATA_SERIAL = 0x8E,
@@ -1428,11 +1516,11 @@ namespace DiscChanger.Models
             {
                 if (initialPacket != null)
                 {
-                    b = initialPacket;initialPacket = null;
-                } 
+                    b = initialPacket; initialPacket = null;
+                }
                 else
                 {
-                    if(cmd == (byte)DiscChangerSonyBD.Command.ID_DATA_NETWORK)
+                    if (cmd == (byte)DiscChangerSonyBD.Command.ID_DATA_NETWORK)
                         SendCommand(new byte[] { PDC, cmd, 0, 0, desiredDataType, (byte)(packetCounter >> 8), (byte)(packetCounter & 0xFF) });
                     b = ReadNextPacketOfType(cmd);
                 }
@@ -1466,7 +1554,7 @@ namespace DiscChanger.Models
             System.Diagnostics.Debug.WriteLine($"Received raw data {GetBytesToString(b)}");
             int l = b.Length;
             int? discNumberNullable = b.Length >= 4 ? FromBCD(b[2], b[3]) : null;
-            if (!discNumberNullable.HasValue )
+            if (!discNumberNullable.HasValue)
                 throw new Exception($"Received IP Disc ID packet count response no disc number");
             discNumber = discNumberNullable.Value;
             dataType = (DiscSonyBD.IDData.DataTypeNetwork)b[4];
@@ -1485,7 +1573,7 @@ namespace DiscChanger.Models
             if (b == null)
                 throw new Exception($"No matching packet response to IP Disc ID Packet count query disc {desiredDiscNumber}, data type: {dataType}");
             int packetCount = ParseNetworkDiscIDPacketCount(b, out int discNumber, out DiscSonyBD.IDData.DataTypeNetwork responseDataType);
-            if ( discNumber != desiredDiscNumber)
+            if (discNumber != desiredDiscNumber)
                 throw new Exception($"Received IP Disc ID packet count response disc number {discNumber} instead of {desiredDiscNumber}");
             if (responseDataType != dataType)
                 throw new Exception($"Received Disc ID response data type {responseDataType} instead of {dataType}");
@@ -1503,7 +1591,7 @@ namespace DiscChanger.Models
             {
                 case DiscChangerSonyBD.Command.DISC_INFORMATION:
                     string s = parseDiscInformationPacket(b, out int? _, out string discTypeString, out int titleTrackNumber, out DiscSonyBD.Information.DataType discInfoType);
-                    if (discNumber.HasValue )
+                    if (discNumber.HasValue)
                     {
                         if (newDiscBD == null) throw new Exception("Not processing new disc");
                         if (newDisc.Slot != discNumberString) throw new Exception("Slot mismatch ");
@@ -1538,13 +1626,13 @@ namespace DiscChanger.Models
                 case DiscChangerSonyBD.Command.ID_DATA_NETWORK:
                     if (newDiscBD == null) throw new Exception("Not processing new disc");
                     int packetCount = ParseNetworkDiscIDPacketCount(b, out int networkDiscNumber, out DiscSonyBD.IDData.DataTypeNetwork networkDataType);
-                    if (packetCount>0 && Int32.Parse(newDiscBD.Slot)==networkDiscNumber)
+                    if (packetCount > 0 && Int32.Parse(newDiscBD.Slot) == networkDiscNumber)
                     {
                         DiscSonyBD.IDData idData = newDiscBD.DiscIDData ?? new DiscSonyBD.IDData();
                         switch (networkDataType)
                         {
-                            case DiscSonyBD.IDData.DataTypeNetwork.GraceNoteDiscID_Info: idData.GraceNoteDiscIDPacketCount=packetCount; break;
-                            case DiscSonyBD.IDData.DataTypeNetwork.AACSDiscID_Info: idData.AACSDiscIDPacketCount=packetCount; break;
+                            case DiscSonyBD.IDData.DataTypeNetwork.GraceNoteDiscID_Info: idData.GraceNoteDiscIDPacketCount = packetCount; break;
+                            case DiscSonyBD.IDData.DataTypeNetwork.AACSDiscID_Info: idData.AACSDiscIDPacketCount = packetCount; break;
                             default:
                                 throw new Exception($"Unrecognized Network DiscID info data type: {networkDataType}");
                         }
@@ -1585,7 +1673,7 @@ namespace DiscChanger.Models
             const int metaDataOffset = 9;
             var i = Array.IndexOf(b, (byte)0, metaDataOffset);
             var count = i != -1 ? i - metaDataOffset : b.Length - metaDataOffset;
-            return count > 0 ?Encoding.UTF8.GetString(b, metaDataOffset, count):null;
+            return count > 0 ? Encoding.UTF8.GetString(b, metaDataOffset, count) : null;
         }
         private string retrieveDiscInformation(DiscSonyBD.Information.DataType dataType, int track)
         {
@@ -1609,7 +1697,7 @@ namespace DiscChanger.Models
             if (newDiscBD == null) throw new Exception("Not processing new disc");
             if (newDiscBD.TableOfContents != null &&
                 newDiscBD.TableOfContents.PacketCount > 0 &&
-                newDiscBD.TableOfContents.Titles == null&&
+                newDiscBD.TableOfContents.Titles == null &&
                 this.networkSocket != null)
             {
                 newDiscBD.TableOfContents = receiveTOC(discNumber, (byte)DiscChangerSonyBD.Command.TOC_DATA_NETWORK, null);
@@ -1622,7 +1710,7 @@ namespace DiscChanger.Models
                 oldDisc is DiscSonyBD oldDiscBD &&
                 oldDiscBD.DiscInformation?.AlbumTitleOrDiscName != null &&
                 oldDiscBD.DiscIDData != null &&
-                oldDiscBD.DiscData==newDiscBD.DiscData &&
+                oldDiscBD.DiscData == newDiscBD.DiscData &&
                 di.DiscTypeString == oldDiscBD.DiscInformation.DiscTypeString &&
                 di.AlbumTitleOrDiscName == oldDiscBD.DiscInformation.AlbumTitleOrDiscName)
             {
@@ -1631,7 +1719,7 @@ namespace DiscChanger.Models
                 return;
             }
             di.AlbumOrDiscGenre = retrieveDiscInformation(DiscSonyBD.Information.DataType.AlbumOrDiscGenre, 0);
-            
+
             if (di.DiscTypeString == "CDDA")
             {
                 di.TracksOrTitles = new List<DiscSonyBD.Information.TrackOrTitle>(newDiscBD.DiscData.TrackCount().Value);
@@ -1669,7 +1757,7 @@ namespace DiscChanger.Models
                 if (b != null)
                     id.GraceNoteDiscID = System.Text.Encoding.UTF8.GetString(b);
             }
-            if (di.DiscTypeString == "BD-ROM" && id.AACSDiscID==null)
+            if (di.DiscTypeString == "BD-ROM" && id.AACSDiscID == null)
             {
                 byte dataType, cmd;
                 int firstPacketNumber;

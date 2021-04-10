@@ -116,5 +116,17 @@ namespace DiscChanger.Hubs
                 System.Diagnostics.Debug.WriteLine("Exception from Delete Changer " + changerKey + ": " + e.Message);
             }
         }
+        public async Task ShiftDiscs(string changerKey, string sourceSlotsSet, string destinationSlotsSet)
+        {
+            try
+            {
+                await discChangerService.Changer(changerKey).ShiftDiscs(sourceSlotsSet, destinationSlotsSet);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Exception from ShiftDiscs " + changerKey + '/' + sourceSlotsSet + '/' + destinationSlotsSet + ": " + e.Message);
+            }
+        }
+
     }
 }
