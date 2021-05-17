@@ -1,6 +1,6 @@
 ﻿/*  Copyright 2020 Hugo Lyppens
 
-    MusicBrainz.cs is part of DiscChanger.NET.
+    MetaDataMusicBrainz.cs is part of DiscChanger.NET.
 
     DiscChanger.NET is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,12 +25,15 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using System.Web;
 using MB = MetaBrainz.MusicBrainz;
 
 namespace DiscChanger.Models
 {
-    public class MusicBrainz
+    public class MetaDataMusicBrainz : MetaDataProvider
     {
+        public const string Type = "MusicBrainz";
         public string musicBrainzPath;
         public string musicBrainzArtPath;
         public string musicBrainzRelPath;
@@ -38,33 +41,16 @@ namespace DiscChanger.Models
 
         public bool ShortenLastFrame { get; set; } = true;
 
-
-        public class Track {
+        public class Track : MetaDataProvider.Track
+        {
             public Track() { }
-            public Track(Guid iD, TimeSpan? length, int? position, string title)
+            public Track(Guid iD, TimeSpan? length, int? position, string title):base(length, position, title)
             {
                 ID = iD;
-                Length = length;
-                Position = position;
-                Title = title;
             }
 
             public Guid ID { get; set; }
-
-            [JsonConverter(typeof(JsonTimeSpanConverter))]
-            public System.TimeSpan? Length { get; set; }
-            public int? Position { get; set; }
-            public string Title { get; set; }
         };
-        sealed class IntArrayComparer : EqualityComparer<int[]>
-        {
-            public override bool Equals(int[] x, int[] y)
-              => StructuralComparisons.StructuralEqualityComparer.Equals(x, y);
-
-            public override int GetHashCode(int[] x)
-              => StructuralComparisons.StructuralEqualityComparer.GetHashCode(x);
-        }
-
         public class Data
         {
             public int[] Lengths { get; set; }
@@ -76,6 +62,10 @@ namespace DiscChanger.Models
             public Guid[] ReleaseIDs { get; set; }
             public Guid? ArtReleaseID { get; set; }
             public string ArtFileName { get; set; }
+            public string GetArtFileURL()
+            {
+                return ArtFileName != null ? ArtRelPath + '/' + HttpUtility.UrlEncode(ArtFileName) : null;
+            }
             public string ArtContentType { get; set; }
             public string[] URLs { get; set; }
 
@@ -87,25 +77,30 @@ namespace DiscChanger.Models
         }
 
         private ConcurrentDictionary<string, Data> discs = new ConcurrentDictionary<string, Data>();
-        private ConcurrentDictionary<int[], string> lengths2Name = new ConcurrentDictionary<int[], string>(new IntArrayComparer());
-        public MusicBrainz(string musicBrainzPath, string musicBrainzRelPath)
+        private ConcurrentDictionary<int[], string> lengths2Name = new ConcurrentDictionary<int[], string>(new MetaDataProvider.IntArrayComparer());
+        public MetaDataMusicBrainz(string musicBrainzPath, string musicBrainzRelPath)
         {
             this.musicBrainzPath = musicBrainzPath;
-            if (!Directory.Exists(musicBrainzPath))
-                Directory.CreateDirectory(musicBrainzPath);
             this.musicBrainzArtPath = Path.Combine(musicBrainzPath, "Art");
-            if (!Directory.Exists(musicBrainzArtPath))
-                Directory.CreateDirectory(musicBrainzArtPath);
+            var dirMusicBrainz = Directory.CreateDirectory(musicBrainzPath);
+            _ = Directory.CreateDirectory(musicBrainzArtPath);
             this.musicBrainzRelPath = musicBrainzRelPath;
-            this.musicBrainzArtRelPath = musicBrainzRelPath+"/Art";
+            this.musicBrainzArtRelPath = musicBrainzRelPath + "/Art";
 
-            foreach( var name in Directory.GetFiles( musicBrainzPath, "*.json")) 
+            foreach (var fileInfo in dirMusicBrainz.GetFiles("*.json"))
             {
-                Data d = JsonSerializer.Deserialize<Data>(File.ReadAllText(Path.Combine(musicBrainzPath, name)));
-                d.ArtRelPath = musicBrainzArtRelPath;
-                string baseName = Path.GetFileNameWithoutExtension(name);
-                discs[baseName] = d;
-                lengths2Name[d.Lengths] = baseName;
+                try
+                {
+                    Data d = JsonSerializer.Deserialize<Data>(File.ReadAllText(fileInfo.FullName));
+                    d.ArtRelPath = musicBrainzArtRelPath;
+                    string baseName = Path.GetFileNameWithoutExtension(fileInfo.Name);
+                    discs[baseName] = d;
+                    lengths2Name[d.Lengths] = baseName;
+                }
+                catch(Exception e) 
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error {e.Message} reading MusicBrainz metadata {fileInfo.FullName}");
+                }
             }
         }
         static private bool discMatch(IDisc disc, int[] lengths)
@@ -114,17 +109,16 @@ namespace DiscChanger.Models
         }
         static private ulong discDiff(IDisc disc, int[] lengths)
         {
-            if (disc==null||lengths==null||disc.Offsets.Count != lengths.Length)
+            if (disc == null || lengths == null || disc.Offsets.Count != lengths.Length)
                 return UInt64.MaxValue;
-            return disc.Offsets.Zip(disc.Offsets.Skip(1), (c, n) => n - c).Concat(new int[1] { disc.Sectors - disc.Offsets.LastOrDefault() }).Zip(lengths).Aggregate(0UL,(s,v)=> { ulong d = (ulong)(v.First - v.Second); s += d * d; return s; });
+            return disc.Offsets.Zip(disc.Offsets.Skip(1), (c, n) => n - c).Concat(new int[1] { disc.Sectors - disc.Offsets.LastOrDefault() }).Zip(lengths).Aggregate(0UL, (s, v) => { ulong d = (ulong)(v.First - v.Second); s += d * d; return s; });
         }
-        static readonly HashSet<char> blackList = new HashSet<char>(System.IO.Path.GetInvalidFileNameChars().Concat(new char[] { '_','.','+' })); //plus added to deal with IIS double escaping rule
 
         internal Data Get(Disc d)
         {
             var lengths = d.StandardizedCDTableOfContents();
             if (lengths != null)
-            { 
+            {
                 if (lengths2Name.TryGetValue(lengths, out string name))
                 {
                     return discs[name];
@@ -132,8 +126,8 @@ namespace DiscChanger.Models
             }
             return null;
         }
-
-        internal Data Lookup(Disc d)
+        
+        internal async Task<Data> RetrieveMetaData(Disc d)
         {
             var inc = MB.Include.Artists | MB.Include.Labels | MB.Include.Recordings | MB.Include.ReleaseGroups | MB.Include.UrlRelationships;
             MB.Query query = null;
@@ -141,27 +135,43 @@ namespace DiscChanger.Models
             try
             {
                 var lengths = d.StandardizedCDTableOfContents();
-                if(lengths != null)
+                if (lengths != null)
                 {
                     if (lengths2Name.TryGetValue(lengths, out string name))
                     {
                         return discs[name];
                     }
                     int frameCount = lengths.Length;
-
-                    int initial = 150;
-                    var cumulative = lengths.Aggregate(new List<int>(frameCount + 4) { 1, frameCount, 0, initial }, (c, nxt) => { c.Add(c.Last() + nxt); return c; });
-                    int total = cumulative.Last();
-                    cumulative[2] = total;
-                    var queryTOC = cumulative.Take(frameCount + 3);
-                    var discTOC = MB.DiscId.TableOfContents.SimulateDisc(1, (byte)frameCount, queryTOC.Skip(2).ToArray());
-                    var queryTOCArray = queryTOC.ToArray();
-                    query = new MB.Query("DiscChangerApp");
+                    MB.Interfaces.Entities.IDisc disc = null;
+                    MB.Interfaces.IDiscIdLookupResult result = null;
+                    int[] queryTOCArray=null;
+                    int[] firstTrackLBAs = MetaDataProvider.CDCommonFirstTrackLBAs;
+                    string graceNoteDiscID = (d as DiscSonyBD)?.DiscIDData?.GraceNoteDiscID;
+                    if (graceNoteDiscID != null)
+                    {
+                        int spaceIndex = graceNoteDiscID.IndexOf(' ');
+                        if(spaceIndex>0 && Int32.TryParse(graceNoteDiscID.Substring(0,spaceIndex), out int firstTrackLBA))
+                            firstTrackLBAs = new int[] { firstTrackLBA };
+                    }
+                    foreach (int initial in firstTrackLBAs)
+                    {
+                        //                    int initial = 150;
+                        var cumulative = lengths.Aggregate(new List<int>(frameCount + 4) { 1, frameCount, 0, initial }, (c, nxt) => { c.Add(c.Last() + nxt); return c; });
+                        int total = cumulative.Last();
+                        cumulative[2] = total;
+                        var queryTOC = cumulative.Take(frameCount + 3);
+                        var discTOC = MB.DiscId.TableOfContents.SimulateDisc(1, (byte)frameCount, queryTOC.Skip(2).ToArray());
+                        queryTOCArray = queryTOC.ToArray();
+                        query = new MB.Query("DiscChangerApp");
+                        result = await query.LookupDiscIdAsync(discTOC.DiscId, queryTOCArray, inc, true, true);
+                        disc = result.Disc;
+                        if (disc != null)
+                            break;
+                    }
                     coverArt = new MB.CoverArt.CoverArt("DiscChanger.NET", "0.1", "info@DiscChanger.NET");
-
-                    var result = query.LookupDiscId(discTOC.DiscId, queryTOCArray, inc, true, true);
-                    MB.Interfaces.Entities.IDisc disc = result.Disc;
                     IReadOnlyList<MB.Interfaces.Entities.IRelease> releases = disc != null ? disc.Releases : result.Releases;
+                    if (releases == null||releases.Count==0)
+                        return null;
                     Data data = new Data();
                     data.ArtRelPath = musicBrainzArtRelPath;
                     data.Lengths = lengths;
@@ -195,8 +205,8 @@ namespace DiscChanger.Models
                     data.Title = rm.FirstOrDefault(t => !String.IsNullOrEmpty(t.Item1.Title))?.Item1.Title.Trim();
                     var URLs = selectedReleases.SelectMany(r => r.Relationships.Select(rel => rel.Url?.Resource?.AbsoluteUri).Where(s => !String.IsNullOrEmpty(s))).Distinct().ToArray();
                     data.URLs = URLs.Length > 0 ? URLs : null;
-                    string fileNameArtist = new string((data.Artist ?? "ArtistUnk").Where(c => !Char.IsWhiteSpace(c) && !blackList.Contains(c)).Take(40).ToArray());
-                    string fileNameTitle = new string((data.Title ?? "TitleUnk").Where(c => !Char.IsWhiteSpace(c) && !blackList.Contains(c)).Take(80).ToArray());
+                    string fileNameArtist = MetaDataProvider.RemoveBlacklistedCharacters(data.Artist ?? "ArtistUnk", 40);
+                    string fileNameTitle = MetaDataProvider.RemoveBlacklistedCharacters(data.Title ?? "TitleUnk", 80);
                     string fileNameBaseK = fileNameArtist + '_' + fileNameTitle;
                     string fileNameBase = fileNameBaseK;
                     int i = 1;
@@ -246,7 +256,7 @@ namespace DiscChanger.Models
             }
             finally
             {
-                if(query!=null)
+                if (query != null)
                     query.Dispose();
             }
         }

@@ -8,15 +8,19 @@
   <ItemGroup>
     <Compile Remove="Pages\Backup\**" />
     <Compile Remove="private\**" />
+    <Compile Remove="wwwroot\Backup\**" />
     <Compile Remove="wwwroot\Discs\**" />
     <Content Remove="Pages\Backup\**" />
     <Content Remove="private\**" />
+    <Content Remove="wwwroot\Backup\**" />
     <Content Remove="wwwroot\Discs\**" />
     <EmbeddedResource Remove="Pages\Backup\**" />
     <EmbeddedResource Remove="private\**" />
+    <EmbeddedResource Remove="wwwroot\Backup\**" />
     <EmbeddedResource Remove="wwwroot\Discs\**" />
     <None Remove="Pages\Backup\**" />
     <None Remove="private\**" />
+    <None Remove="wwwroot\Backup\**" />
     <None Remove="wwwroot\Discs\**" />
   </ItemGroup>
 
@@ -25,6 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Remove="GD3settings.json" />
     <Content Remove="Pages\Configuration.cshtml" />
     <Content Remove="wwwroot\DiscChangers.json" />
   </ItemGroup>
@@ -34,7 +39,18 @@
     <PackageReference Include="MetaBrainz.MusicBrainz" Version="3.0.2" />
     <PackageReference Include="MetaBrainz.MusicBrainz.CoverArt" Version="3.0.0" />
     <PackageReference Include="MetaBrainz.MusicBrainz.DiscId" Version="2.0.1" />
-    <PackageReference Include="System.IO.Ports" Version="5.0.0" />
+    <PackageReference Include="System.IO.Ports" Version="5.0.1" />
+    <PackageReference Include="System.ServiceModel.Duplex" Version="4.8.1" />
+    <PackageReference Include="System.ServiceModel.Http" Version="4.8.1" />
+    <PackageReference Include="System.ServiceModel.NetTcp" Version="4.8.1" />
+    <PackageReference Include="System.ServiceModel.Security" Version="4.8.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="System.ServiceModel" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services" />
+  </ItemGroup>
 </Project>

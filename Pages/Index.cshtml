@@ -10,7 +10,7 @@
 
 @{var discDisplaySize = Request.Cookies["DiscDisplaySize"] ?? "15"; }
 <nav class="navbar navbar-expand-md sticky-top navbar-light bg-secondary">
-    <img  class="navbar-brand" src="img/SonyDVP-CX777ES600.png" />
+    <a href="http://discchanger.net"><img class="navbar-brand" src="img/SonyDVP-CX777ES600.png" /></a>
     <div class="container">
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -32,14 +32,14 @@
                             for (int dci = 0; dci < discChangerCount; dci++)
                             {
                                 Models.DiscChanger dc = dcs.DiscChangers[dci];
-                                Models.DiscChanger.ScanStatus scanStatus = dc.getScanStatus();
-                                bool scanInProgress = scanStatus != null;
+                                Models.DiscChanger.OpStatus opStatus = dc.GetOpStatus();
+                                bool scanInProgress = opStatus != null;
                                 string controlsDisplay = scanInProgress ? "none" : "block";
                                 string scanControlsDisplay = scanInProgress ? "block" : "none";
-                                string scanStatusString = String.Empty;
-                                if (scanStatus?.DiscNumber != null)
+                                string opStatusString = String.Empty;
+                                if (opStatus?.DiscNumber != null)
                                 {
-                                    scanStatusString = "Scanning: " + scanStatus.Index.Value + "/" + scanStatus.Count.Value + ", Slot: " + scanStatus.DiscNumber.Value;
+                                    opStatusString = $"{opStatus.Op}: {opStatus.Index.Value}/{opStatus.Count.Value}, Slot: {opStatus.DiscNumber.Value}";
                                 }
 
                                 var name = dc.Name;
@@ -62,10 +62,11 @@
                                         <button id="discs_@key" class="btn" title="Toggle all discs vs. one disc" onclick="control('@key','discs')"><i class="fas fa-compact-disc fa-lg"></i></button>
                                         <button id="scan_@key" class="btn" title="Prompt to start scanning given set of discs" onclick="scan('@key',&quot;@name&quot;)"><i class="fas fa-coins fa-lg"></i></button>
                                         <button id="delete-discs_@key" class="btn" title="Prompt for set of discs to delete" onclick="deleteDiscs('@key',&quot;@name&quot;)"><i class="fas fa-minus-circle fa-lg"></i></button>
+                                        <button id="metadata_@key" class="btn" data-toggle="modal" data-target="#metaDataModal" data-changer-key='@key' data-changer-name="@name" title="Prompt for set of slots to retrieve metadata for" ><i class="fas fa-eye fa-lg"></i></button>
                                     </div>
                                     <div id="scan-controls_@key" style="display:@scanControlsDisplay;">
-                                        <input readonly title="Disc Scan Status" id="scan-status_@key" size="24" value="@scanStatusString" />
-                                        <button id="cancel-scan_@key" onclick="cancelScan('@key')">Cancel Disc Scan</button>
+                                        <input readonly title="Status" id="scan-status_@key" size="40" value="@opStatusString" />
+                                        <button id="cancel-scan_@key" onclick="cancelOp('@key')">Cancel Operation</button>
                                     </div>
                                 </td>
                                 <td class="hide-on-config">
@@ -96,6 +97,7 @@
                         <tr hidden class="config disc-changer">
                             <td>
                                 <a asp-page="DiscChangerConfig"><button class="btn config" type="button" title="Add a disc changer">Add</button></a>
+                                <a asp-page="GD3Config"><button class="btn config" type="button" title="Configure GetDigitalData (GD3)">GD3</button></a>
                             </td>
                             <td>
                             </td>
@@ -125,12 +127,43 @@
                 foreach (var kvp in l)
                 {
                     var d = kvp.Value;
-                    @Html.Raw(d.toHtml());
+                    @Html.Raw(d.ToHtml());
                 }
             }
         }
     }
 }
+</div>
+<div class="modal fade" id="metaDataModal" tabindex="-1" role="dialog" aria-labelledby="metaDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="metaDataModalLabel">Retrieve metadata</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+@*<form>*@
+                    <select id="metadata-selection" selectedIndex="-1">
+                        @foreach (var metaDataService in Model.discChangerService.GetAvailableMetaDataServices())
+                        {
+                            <option>@metaDataService</option>
+                        }
+                    </select>
+
+                    <div class="form-group">
+                        <label for="slots-set" class="col-form-label">For these slots:</label>
+                        <input type="text" class="form-control" id="slots-set" disabled>
+                    </div>
+@*</form>*@
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" id="metadata-start-retrieval" class="btn btn-primary" data-dismiss="modal">Start metadata retrieval</button>
+            </div>
+        </div>
+    </div>
 </div>
 @section scripts {
     @if(dcs.DiscChangers.Count==0)
@@ -140,6 +173,7 @@
         </script>
     }
     <script>
+        setup_metadata_dialog($('#metaDataModal'));
         setup_popover($('.disc'));
     </script>
 }

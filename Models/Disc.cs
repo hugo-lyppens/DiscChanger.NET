@@ -31,7 +31,7 @@ namespace DiscChanger.Models
     //    public class Disc : IHostedService, IDisposable
     public abstract class Disc
     {
-        protected Disc() {}
+        protected Disc() { }
         protected Disc(string slot) { Slot = slot; }
         public static Comparer<string> SlotComparer = Comparer<string>.Create((s1, s2) =>
         {
@@ -49,11 +49,31 @@ namespace DiscChanger.Models
             //    return p1.Key.CompareTo(p2.Key);
         });
 
-        public MusicBrainz.Data LookupData;
+        public MetaDataMusicBrainz.Data DataMusicBrainz;
+        public MetaDataGD3.Match DataGD3Match;
         public string Slot { get; set; }
         public DiscChanger DiscChanger;
         public System.DateTime? DateTimeAdded { get; set; }
-
+        public abstract bool IsCD();
+        public abstract bool IsDVD();
+        public abstract bool IsBD();
+        public virtual bool NeedsMetaData(string type)
+        {
+            bool b = IsCD();
+            if (!b && !IsDVD() && !IsBD())
+                return false;
+            switch (type)
+            {
+                case MetaDataMusicBrainz.Type:
+                    return DataMusicBrainz == null && b;
+                case MetaDataGD3.Type_Match:
+                    return DataGD3Match == null;
+                case MetaDataGD3.Type_MetaData:
+                    return DataGD3Match != null && !DataGD3Match.HasMetaData();
+                default:
+                    throw new Exception("NeedsMetaData unknown type: " + type);
+            }
+        }
 
         internal int CompareTo(Disc other)
         {
@@ -62,7 +82,7 @@ namespace DiscChanger.Models
             return Slot.CompareTo(other.Slot);
         }
 
-        public virtual void Clear() { Slot = null; LookupData = null; }
+        public virtual void Clear() { Slot = null; DataMusicBrainz = null; }
         public override bool Equals(object obj)
         {
             return obj is Disc other && this.Slot == other.Slot;
@@ -72,7 +92,7 @@ namespace DiscChanger.Models
             return HashCode.Combine(Slot);
         }
         public abstract int[] StandardizedCDTableOfContents();
-        public static bool operator==(Disc lhs, Disc rhs)
+        public static bool operator ==(Disc lhs, Disc rhs)
         {
             // Check for null on left side.
             if (Object.ReferenceEquals(lhs, null))
@@ -94,38 +114,39 @@ namespace DiscChanger.Models
         {
             return !(lhs == rhs);
         }
-        public virtual string getArtist()
+        public virtual string GetArtist()
         {
-            return LookupData?.Artist;
+            return DataGD3Match?.GetArtist() ?? DataMusicBrainz?.Artist;
         }
         public virtual string getTitle()
         {
-            return LookupData?.Title;
+            return DataGD3Match?.GetTitle() ?? DataMusicBrainz?.Title;
         }
+
         public const string DiscTypeNone = "None";
 
-        public virtual string getDiscType()
+        public virtual string GetDiscType()
         {
             return DiscTypeNone;
         }
-        public abstract IEnumerable<MusicBrainz.Track> getTracks();
-        public virtual string toHtml()
+        public abstract IEnumerable<MetaDataProvider.Track> GetTracks();
+        public virtual string ToHtml()
         {
-            var afn = LookupData?.ArtFileName;
+            var afp = DataGD3Match?.GetArtFileURL() ?? DataMusicBrainz?.GetArtFileURL();
             var slotHtml = HtmlEncode(Slot ?? "--");
             StringBuilder sb = new StringBuilder(@"<div class=""disc"" data-changer=""", 8192);
             sb.Append(DiscChanger.Key); sb.Append(@""" data-slot= """); sb.Append(slotHtml); sb.Append(@"""><div class=""disc-header""><span class=""slot"">");
             sb.Append(HtmlEncode(DiscChanger.Name)); sb.Append(':'); sb.Append(slotHtml);
             sb.Append(@"</span><span class=""disc-type"">");
-            sb.Append(HtmlEncode(getDiscType() ?? "-"));
+            sb.Append(HtmlEncode(GetDiscType() ?? "-"));
             sb.Append("</span></div>");
 
-            if (afn != null )
+            if (afp != null)
             {
-                sb.Append("<img src = \""); sb.Append(LookupData.ArtRelPath); sb.Append('/'); sb.Append(HttpUtility.UrlEncode(afn)); sb.Append(@"""/>");
+                sb.Append("<img src = \""); sb.Append(afp); sb.Append(@"""/>");
             }
             sb.Append(@"<div class=""artist"">");
-            string a = getArtist();
+            string a = GetArtist();
             if (a != null)
                 sb.Append(HtmlEncode(a));
             sb.Append(@"</div><div class=""title"">");
@@ -134,7 +155,7 @@ namespace DiscChanger.Models
                 sb.Append(HtmlEncode(t));
             sb.Append(@"</div>");
             sb.Append(@"<div class=""data"" style=""display:none"">");
-            var tracks = getTracks();
+            var tracks = GetTracks();
             if (tracks != null)
             {
                 sb.Append(@"<table class=""tracks"">");
@@ -152,16 +173,16 @@ namespace DiscChanger.Models
                 }
                 sb.Append(@"</table>");
             }
-            if (LookupData != null)
+            if (DataMusicBrainz != null)
             {
                 sb.Append(@"<div class=""urls"">");
-                var urls = LookupData?.URLs;
+                var urls = DataMusicBrainz?.URLs;
                 if (urls != null)
                     foreach (var url in urls)
                     {
                         sb.Append(@"<a href = """); sb.Append(url); sb.Append(@""" target = ""_blank""></a>");
                     }
-                sb.Append(@"<a class=""diag"" href = """); sb.Append(LookupData.diagURL()); sb.Append(@""" target = ""_blank""></a>");
+                sb.Append(@"<a class=""diag"" href = """); sb.Append(DataMusicBrainz.diagURL()); sb.Append(@""" target = ""_blank""></a>");
                 sb.Append(@"</div>");
             }
 
@@ -170,7 +191,7 @@ namespace DiscChanger.Models
             return sb.ToString();
         }
 
-        internal virtual bool hasBroadcastData()
+        public virtual bool HasBroadcastData()
         {
             return false;
         }
@@ -178,8 +199,20 @@ namespace DiscChanger.Models
 
     public abstract class DiscSony : Disc
     {
-        protected DiscSony(){}
+        protected DiscSony() { }
         protected DiscSony(string slot) : base(slot) { }
+        public override bool IsCD()
+        {
+            return TableOfContents?.TitleFrames?.ContainsKey("CD") ?? false;//could be CD or hybrid SACD with known toc from CD layer
+        }
+        public override bool IsDVD()
+        {
+            return DiscData?.DiscType?.StartsWith("DVD") ?? false;
+        }
+        public override bool IsBD()
+        {
+            return DiscData?.DiscType == "BD";
+        }
 
         static public readonly Dictionary<byte, string> discType2String = new Dictionary<byte, string> {
             {(byte)0x00, DiscTypeNone },
@@ -279,7 +312,7 @@ namespace DiscChanger.Models
             public string Source { get; set; }
             public string[] Titles { get; set; }
             public ConcurrentDictionary<string, int[]> TitleFrames { get; set; }
-            public int PacketCount=0;
+            public int PacketCount = 0;
             public TOC ShallowCopy()
             {
                 return (TOC)MemberwiseClone();
@@ -340,7 +373,7 @@ namespace DiscChanger.Models
         {
             return HashCode.Combine(DiscData, TableOfContents);
         }
-        public override string getDiscType()
+        public override string GetDiscType()
         {
             return DiscData?.DiscType;
         }
@@ -357,27 +390,26 @@ namespace DiscChanger.Models
             return null;
         }
 
-        public override IEnumerable<MusicBrainz.Track> getTracks()
+        public override IEnumerable<MetaDataProvider.Track> GetTracks()
         {
-            IEnumerable<MusicBrainz.Track> tracks;
-            tracks = LookupData?.Tracks;
-            if (tracks == null && DiscData != null && DiscData.TrackCount() != null)
+            IEnumerable<MetaDataProvider.Track> tracks;
+            tracks = DataGD3Match?.GetTracks() ?? DataMusicBrainz?.Tracks;
+            if (tracks != null || DiscData==null)
+                return tracks;
+            if ( DiscData.TrackCount() != null)
             {
                 var tlist = Enumerable.Range(this.DiscData.StartTrackTitleAlbum.Value, DiscData.TrackCount().Value);
                 if (TableOfContents != null && TableOfContents.TitleFrames.TryGetValue("CD", out int[] framesList))
-                    tracks = Enumerable.Zip(tlist, framesList, (track, frames) => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = track; t.Length = new TimeSpan(((long)frames * 10000000L) / 75L); return t; });
+                    tracks = Enumerable.Zip(tlist, framesList, (track, frames) => new MetaDataProvider.Track() { Position = track, Length = new TimeSpan(((long)frames * 10000000L) / 75L) });
                 else
-                    tracks = tlist.Select(i => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = i; return t; });
+                    tracks = tlist.Select(i => new MetaDataProvider.Track() { Position = i });
             }
-            else
-            {
-                if (tracks == null && DiscData != null && this.TableOfContents != null)
-                    tracks = this.TableOfContents.Titles.Select(i => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = Int32.Parse(i); return t; });
-            }
+            else if (TableOfContents != null)
+                tracks = TableOfContents.Titles.Select(i => new MetaDataProvider.Track(){ Position = Int32.Parse(i) });
             return tracks;
         }
 
-        internal override bool hasBroadcastData()
+        public override bool HasBroadcastData()
         {
             return this.DiscData?.DiscType == DiscTypeNone;
         }
@@ -388,7 +420,7 @@ namespace DiscChanger.Models
     {
         public DiscSonyDVD() { }
 
-        public DiscSonyDVD(string slot):base( slot){}
+        public DiscSonyDVD(string slot) : base(slot) { }
 
         static public readonly Dictionary<ushort, string> languageCode2String = new Dictionary<ushort, string> {
             { (ushort)0x0000, "DiscMemo" },
@@ -449,10 +481,10 @@ namespace DiscChanger.Models
 
         public Text DiscText { get; set; }
         public override void Clear() { DiscText = null; base.Clear(); }
-//        public override bool HasAll() { return base.HasAll() && (DiscText != null/*||!(DiscData.HasMemo||DiscData.HasText)*/); }
+        //        public override bool HasAll() { return base.HasAll() && (DiscText != null/*||!(DiscData.HasMemo||DiscData.HasText)*/); }
         public override bool Equals(object obj)
         {
-            return obj is DiscSonyDVD other  && base.Equals(other) && this.DiscText == other.DiscText;
+            return obj is DiscSonyDVD other && base.Equals(other) && this.DiscText == other.DiscText;
         }
         public override int GetHashCode()
         {
@@ -461,15 +493,21 @@ namespace DiscChanger.Models
 
         public override string getTitle()
         {
-            return base.getTitle()??(DiscText?.TextString != null ? "CD-TEXT: " + DiscText.TextString : null);
+            string t = DataGD3Match?.GetTitle();
+            if (t == null && DataMusicBrainz?.DiscID != null) //exact MusicBrainz match
+                t = DataMusicBrainz?.Title;
+            if (t == null&& DiscText?.TextString!=null)
+                t = "CD-TEXT: " + DiscText.TextString;
+            if (t == null)
+                t = DataMusicBrainz?.Title; //inexact MusicBrainz match
+            return t;
         }
-
-        internal override bool hasBroadcastData()
+        public override bool HasBroadcastData()
         {
             return (DiscData != null &&
                     (TableOfContents != null || (DiscData.DiscType != "DVD" && DiscData.DiscType != "CD")) &&
                     (DiscText != null || (DiscData.DiscType != "DVD" && DiscData.DiscType != "CD" && !DiscData.DiscType.StartsWith("SACD"))))
-                    || base.hasBroadcastData();
+                    || base.HasBroadcastData();
         }
 
     }
@@ -480,11 +518,11 @@ namespace DiscChanger.Models
 
         public DiscSonyBD(string slot) : base(slot) { }
 
-        enum discInfoDataType { AlbumTitleOrDiscName=0, TrackOrTitleName, AlbumOrDiscGenre, TrackOrTitleGenre };
-//"0x00 : Album Title(CDDA) / Disc Name (DVD and BD)
-//0x01 : Track Name(CDDA) / Title Name(DVD and BD)
-//0x02 : Album Genre(CDDA) / Disc Genre(DVD and BD)
-//0x03 : Title Genre / Track Genre "							
+        enum discInfoDataType { AlbumTitleOrDiscName = 0, TrackOrTitleName, AlbumOrDiscGenre, TrackOrTitleGenre };
+        //"0x00 : Album Title(CDDA) / Disc Name (DVD and BD)
+        //0x01 : Track Name(CDDA) / Title Name(DVD and BD)
+        //0x02 : Album Genre(CDDA) / Disc Genre(DVD and BD)
+        //0x03 : Title Genre / Track Genre "							
 
 
         static public readonly Dictionary<ushort, string> languageCode2String = new Dictionary<ushort, string> {
@@ -505,7 +543,7 @@ namespace DiscChanger.Models
             public string AlbumOrDiscGenre { get; set; }
 
             public enum DataType : byte { AlbumTitleOrDiscName, TrackOrTitleName, AlbumOrDiscGenre, TrackOrTitleGenre };
-            public enum DiscType : byte { NoDisc=0x00, CDDA=0x01, DVD_ROM=0x03, BD_ROM=0x05, Unknown=0xff };
+            public enum DiscType : byte { NoDisc = 0x00, CDDA = 0x01, DVD_ROM = 0x03, BD_ROM = 0x05, Unknown = 0xff };
             static public readonly Dictionary<DiscSonyBD.Information.DiscType, string> discType2String = new Dictionary<DiscSonyBD.Information.DiscType, string> {
                 { DiscSonyBD.Information.DiscType.NoDisc, "No Disc" },
                 { DiscSonyBD.Information.DiscType.CDDA, "CDDA" },
@@ -528,11 +566,11 @@ namespace DiscChanger.Models
 
                 public int Number { get; set; }
                 public string Name { get; set; }
-                public static bool operator==(TrackOrTitle t1, TrackOrTitle t2)
+                public static bool operator ==(TrackOrTitle t1, TrackOrTitle t2)
                 {
                     return t1.Equals(t2);
                 }
-                public static bool operator!=(TrackOrTitle t1, TrackOrTitle t2)
+                public static bool operator !=(TrackOrTitle t1, TrackOrTitle t2)
                 {
                     return !t1.Equals(t2);
                 }
@@ -585,7 +623,7 @@ namespace DiscChanger.Models
         public Information DiscInformation { get; set; }
         public class IDData : IEquatable<IDData>
         {
-            public enum DataTypeSerial : byte { GraceNoteDiscID=1, AACSDiscID=2 };
+            public enum DataTypeSerial : byte { GraceNoteDiscID = 1, AACSDiscID = 2 };
             //"0x00 : Information of IP_DISC_ID_DATA (Current Disc ID for Gracenote)
             //0x01 : Information of IP_DISC_ID_DATA(Current Disc ID from AACS file)
             //0x02 : Current Disc ID for Gracenote
@@ -640,7 +678,7 @@ namespace DiscChanger.Models
         public IDData DiscIDData { get; set; }
 
         public override void Clear() { DiscInformation = null; DiscIDData = null; base.Clear(); }
-//        public override bool HasAll() { return base.HasAll() && (DiscInformation != null/*||!(DiscData.HasMemo||DiscData.HasText)*/); }
+        //        public override bool HasAll() { return base.HasAll() && (DiscInformation != null/*||!(DiscData.HasMemo||DiscData.HasText)*/); }
         public override bool Equals(object obj)
         {
             return obj is DiscSonyBD other && base.Equals(other) && this.DiscInformation == other.DiscInformation && this.DiscIDData == other.DiscIDData;
@@ -651,33 +689,43 @@ namespace DiscChanger.Models
         }
         public override string getTitle()
         {
-            return LookupData?.Title ?? (DiscInformation?.AlbumTitleOrDiscName);
+            string t = DataGD3Match?.GetTitle();
+            if (t == null && DataMusicBrainz?.DiscID != null) //exact MusicBrainz match
+                t = DataMusicBrainz?.Title;
+            if (t == null)
+                t = DiscInformation?.AlbumTitleOrDiscName;
+            if (t == null)
+                t=DataMusicBrainz?.Title; //inexact MusicBrainz match
+            return t;
         }
-        public override IEnumerable<MusicBrainz.Track> getTracks()
+        public override IEnumerable<MetaDataProvider.Track> GetTracks()
         {
-            IEnumerable<MusicBrainz.Track> tracks;
-            tracks = LookupData?.Tracks;
-            if (tracks == null)
+            IEnumerable<MetaDataProvider.Track> tracks = DataGD3Match?.GetTracks();
+            if (tracks != null)
+                return tracks;
+            if (DataMusicBrainz?.DiscID == null || DataMusicBrainz?.Tracks == null) //DiscID null means imprecise MusicBrainz match
             {
                 var tracksOrTitles = DiscInformation?.TracksOrTitles;
                 if (tracksOrTitles != null)
                 {
                     var tf = TableOfContents?.TitleFrames;
                     if (tf != null && tf.TryGetValue("CD", out int[] framesList) && framesList.Length >= tracksOrTitles.Count)
-                        tracks = Enumerable.Zip(tracksOrTitles, framesList, (trkOrTitle, frames) => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = trkOrTitle.Number; t.Title = trkOrTitle.Name; t.Length = new TimeSpan(((long)frames * 10000000L) / 75L); return t; }).ToArray();
+                        tracks = Enumerable.Zip(tracksOrTitles, framesList, (trkOrTitle, frames) => new MetaDataProvider.Track { Position = trkOrTitle.Number, Title = trkOrTitle.Name, Length = new TimeSpan(((long)frames * 10000000L) / 75L) }).ToArray();
                     else
-                        tracks = tracksOrTitles.Select(trkOrTitle => { MusicBrainz.Track t = new MusicBrainz.Track(); t.Position = trkOrTitle.Number; t.Title = trkOrTitle.Name; return t; });
+                        tracks = tracksOrTitles.Select(trkOrTitle => new MetaDataProvider.Track { Position = trkOrTitle.Number, Title = trkOrTitle.Name });
+                    return tracks;
                 }
             }
-            return tracks??base.getTracks();
+            tracks = base.GetTracks();
+            return tracks;
         }
 
-        internal override bool hasBroadcastData()
+        public override bool HasBroadcastData()
         {
-            return (DiscData != null && 
-                    (TableOfContents != null || (DiscData.DiscType!="DVD"&&DiscData.DiscType!="CD")) &&
-                    (DiscInformation!=null||(DiscData.DiscType!="DVD" && DiscData.DiscType != "CD" && DiscData.DiscType != "BD")))
-                    || base.hasBroadcastData();
+            return (DiscData != null &&
+                    (TableOfContents != null || (DiscData.DiscType != "DVD" && DiscData.DiscType != "CD")) &&
+                    (DiscInformation != null || (DiscData.DiscType != "DVD" && DiscData.DiscType != "CD" && DiscData.DiscType != "BD")))
+                    || base.HasBroadcastData();
         }
     }
 }

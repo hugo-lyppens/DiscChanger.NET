@@ -83,6 +83,7 @@ namespace DiscChanger.Models
                 throw new Exception("DiscardInBuffer neither serial port nor network connection");
         }
 
+
         protected byte ReadByte()
         {
             if (serialPort != null)
@@ -136,10 +137,10 @@ namespace DiscChanger.Models
             }
         }
 
-        internal abstract Type getDiscType();
-        internal abstract Disc createDisc(string slot = null);
+        internal abstract Type GetDiscType();
+        internal abstract Disc CreateDisc(string slot = null);
 
-        internal void setDisc(string slot, Disc d)
+        internal void SetDisc(string slot, Disc d)
         {
             d.DiscChanger = this;
             d.Slot = slot;
@@ -148,10 +149,19 @@ namespace DiscChanger.Models
 
         protected Disc newDisc;
 
-        internal abstract BitArray getDiscsPresent();
-        internal abstract string getDiscsToScan();
+        internal abstract BitArray GetDiscsPresent();
+        internal abstract string GetDiscsToScan();
+        internal abstract string GetDiscsToDelete();
 
-        internal abstract string getDiscsToDelete();
+        internal string GetMetaDataToRetrieve(string metaDataType)
+        {
+            List<int> list = Discs.Where(kvp => kvp.Value.NeedsMetaData(metaDataType)).
+                        Select(kvp => { return Int32.TryParse(kvp.Key, out int position) ? (int?)position : null; }).
+                        Where(p => p.HasValue).
+                        Select(p => p.Value).ToList();
+            list.Sort();
+            return toSetString(list);
+        }
 
         public static IEnumerable<int> ParseInterval(string interval)
         {
@@ -169,27 +179,31 @@ namespace DiscChanger.Models
             var a = set.Split(',', StringSplitOptions.RemoveEmptyEntries);
             return a.SelectMany(s => ParseInterval(s));
         }
-        public CancellationTokenSource ScanCancellationTokenSource;
-        public class ScanStatus
+        public CancellationTokenSource OpCancellationTokenSource;
+        public class OpStatus
         {
+            public OpStatus(string op) { Op = op; }
+            public string Op;
             public int? DiscNumber;
             public int? Index;
             public int? Count;
         }
-        public ScanStatus currentScanStatus;
+        public OpStatus currentOpStatus;
         public abstract Task<bool> LoadDisc(int disc);
         public async Task Scan(string discSet)
         {
             try
             {
-                await hubContext.Clients.All.SendAsync("ScanInProgress", Key, true);
-                ScanCancellationTokenSource = new CancellationTokenSource();
+                if (OpCancellationTokenSource != null)
+                    throw new Exception("There is a scan in progress on " + this.Key);
+                OpCancellationTokenSource = new CancellationTokenSource();
 
                 var discList = ParseSet(discSet).ToList();
                 discList.Sort();
-                var ct = ScanCancellationTokenSource.Token;
+                var ct = OpCancellationTokenSource.Token;
                 this.bufferBlockDiscSlot = new BufferBlock<string>();
-                this.currentScanStatus = new ScanStatus();
+                this.currentOpStatus = new OpStatus("Scan");
+                await hubContext.Clients.All.SendAsync("OpInProgress", Key, currentOpStatus.Op);
                 int discNumber = 0;
                 int count = discList.Count();
                 int index = 0;
@@ -208,10 +222,11 @@ namespace DiscChanger.Models
                         System.Diagnostics.Debug.WriteLine($"Continuing because LoadDisc false {disc}");
                         continue;
                     }
-                    currentScanStatus.DiscNumber = disc;
-                    currentScanStatus.Index = index;
-                    currentScanStatus.Count = count;
-                    await hubContext.Clients.All.SendAsync("ScanStatus",
+                    currentOpStatus.DiscNumber = disc;
+                    currentOpStatus.Index = index;
+                    currentOpStatus.Count = count;
+                    await hubContext.Clients.All.SendAsync("OpStatus",
+                                                       currentOpStatus.Op,
                                                        Key,
                                                        disc,
                                                        index,
@@ -223,7 +238,7 @@ namespace DiscChanger.Models
                     }
                     else
                     {
-                        ScanCancellationTokenSource.Cancel();
+                        OpCancellationTokenSource.Cancel();
                         return;
                     }
                     discNumber = Int32.Parse(bufferBlockDiscSlot.Receive());//for now assume numeric slots only
@@ -231,28 +246,75 @@ namespace DiscChanger.Models
 
                 }
                 bufferBlockDiscSlot.Complete();
-                ScanCancellationTokenSource.Dispose();
+                OpCancellationTokenSource.Dispose();
             }
             finally
             {
                 bufferBlockDiscSlot = null;
-                ScanCancellationTokenSource = null;
-                await hubContext.Clients.All.SendAsync("ScanInProgress", Key, false);
-                currentScanStatus = null;
+                OpCancellationTokenSource = null;
+                await hubContext.Clients.All.SendAsync("OpInProgress", Key, false);
+                currentOpStatus = null;
             }
         }
-        public void CancelScan()
+
+        public void CancelOp()
         {
-            if (ScanCancellationTokenSource == null)
+            if (OpCancellationTokenSource == null)
                 throw new Exception("There is no scan in progress on " + this.Key);
-            ScanCancellationTokenSource.Cancel();
+            OpCancellationTokenSource.Cancel();
         }
-        public ScanStatus getScanStatus() { return currentScanStatus; }
+        public OpStatus GetOpStatus() { return currentOpStatus; }
+        public async Task RetrieveMetaData(string metaDataType, string slotSet)
+        {
+            try
+            {
+                if (OpCancellationTokenSource != null)
+                    throw new Exception("There is a scan in progress on " + this.Key);
+
+                OpCancellationTokenSource = new CancellationTokenSource();
+
+                var slotList = ParseSet(slotSet).ToList();
+                slotList.Sort();
+                var ct = OpCancellationTokenSource.Token;
+                this.currentOpStatus = new OpStatus(metaDataType);
+                await hubContext.Clients.All.SendAsync("OpInProgress", Key, currentOpStatus.Op);
+                int count = slotList.Count();
+                int index = 0;
+                var metaDataTypeSet = new HashSet<string> { metaDataType };
+                foreach (var slot in slotList)
+                {
+                    string slotString = slot.ToString();
+                    ++index;
+                    if (ct.IsCancellationRequested)
+                        break;
+                    if (Discs.TryGetValue(slotString, out Disc disc))
+                    {
+                        currentOpStatus.DiscNumber = slot;
+                        currentOpStatus.Index = index;
+                        currentOpStatus.Count = count;
+                        await hubContext.Clients.All.SendAsync("OpStatus",
+                                                           currentOpStatus.Op,
+                                                           Key,
+                                                           slot,
+                                                           index,
+                                                           count);
+                        await this.discChangerService.UpdateMetaData(disc, metaDataTypeSet);
+                    }
+                }
+                OpCancellationTokenSource.Dispose();
+            }
+            finally
+            {
+                OpCancellationTokenSource = null;
+                await hubContext.Clients.All.SendAsync("OpInProgress", Key, false);
+                currentOpStatus = null;
+            }
+        }
 
         internal async Task DeleteDiscs(string discSet)
         {
-            if (ScanCancellationTokenSource != null)
-                throw new Exception("There is a scan in progress on " + this.Key);
+            if (OpCancellationTokenSource != null)
+                throw new Exception("There is a op in progress on " + this.Key);
             bool b = false;
 
             lock (this.Discs)
@@ -275,7 +337,7 @@ namespace DiscChanger.Models
             var destinationSlotsSetCount = destinationSlotsSet.Count();
             if (sourceSlotsSetCount != destinationSlotsSetCount)
                 throw new Exception($"{sourceSlotsSetString} count ({sourceSlotsSetCount})!={destinationSlotsSetString} count ({destinationSlotsSetCount})");
-            if (ScanCancellationTokenSource != null)
+            if (OpCancellationTokenSource != null)
                 throw new Exception("There is a scan in progress on " + this.Key);
             lock (this.Discs)
             {
@@ -384,7 +446,6 @@ namespace DiscChanger.Models
             }
             return sb.ToString();
         }
-
         public abstract Task<string> Control(string command);
 
         public virtual bool SupportsCommand(string command)
@@ -455,7 +516,7 @@ namespace DiscChanger.Models
             {
                 if (disposing)
                 {
-                    ScanCancellationTokenSource?.Dispose(); ScanCancellationTokenSource = null;
+                    OpCancellationTokenSource?.Dispose(); OpCancellationTokenSource = null;
                     Disconnect();
                 }
 
@@ -538,7 +599,7 @@ namespace DiscChanger.Models
         protected virtual void retrieveNonBroadcastData() { }
         protected static TimeSpan CommandTimeOut = TimeSpan.FromSeconds(1);
         protected static TimeSpan LongCommandTimeOut = TimeSpan.FromSeconds(10);
-        internal override BitArray getDiscsPresent()
+        internal override BitArray GetDiscsPresent()
         {
             byte cmd;
             byte[] discExistBitReq = null;
@@ -588,9 +649,9 @@ namespace DiscChanger.Models
             System.Diagnostics.Debug.WriteLine("Received " + count + " packets from " + GetBytesToString(discExistBitReq));
             return new BitArray(discExistBit.ToArray());
         }
-        internal override string getDiscsToScan()
+        internal override string GetDiscsToScan()
         {
-            BitArray discExistBitArray = getDiscsPresent();
+            BitArray discExistBitArray = GetDiscsPresent();
             foreach (var key in this.Discs.Keys)
             {
                 if (Int32.TryParse(key, out int position))
@@ -602,9 +663,9 @@ namespace DiscChanger.Models
         }
 
 
-        internal override string getDiscsToDelete()
+        internal override string GetDiscsToDelete()
         {
-            BitArray discExistBitArray = getDiscsPresent();
+            BitArray discExistBitArray = GetDiscsPresent();
             var l = discExistBitArray.Length;
             BitArray discToDeleteBitArray = new BitArray(l);
             foreach (var key in this.Discs.Keys)
@@ -944,7 +1005,7 @@ namespace DiscChanger.Models
                 {
                     if (!processPacket(b))
                         responses.Post(b);
-                    else if (newDisc != null && newDisc.hasBroadcastData())
+                    else if (newDisc != null && newDisc.HasBroadcastData())
                     {
                         b = null;
                         try
@@ -1128,7 +1189,7 @@ namespace DiscChanger.Models
                     if (discNumber.HasValue && discTypeByte != 0xFF)
                     {
                         if (newDisc == null || newDisc.Slot != discNumberString || (newDisc as DiscSony)?.DiscData != null)
-                            newDisc = createDisc(discNumberString);
+                            newDisc = CreateDisc(discNumberString);
                         ((DiscSony)newDisc).DiscData = dd;
                     }
                     break;
@@ -1138,7 +1199,7 @@ namespace DiscChanger.Models
                         DiscSony.TOC toc = receiveTOC(discNumber.Value, (byte)cmd, b);
 
                         if (newDisc == null || newDisc.Slot != discNumberString || (newDisc as DiscSony)?.TableOfContents != null)
-                            newDisc = createDisc(discNumberString);
+                            newDisc = CreateDisc(discNumberString);
                         ((DiscSony)newDisc).TableOfContents = toc;
                     }
                     break;
@@ -1357,11 +1418,12 @@ namespace DiscChanger.Models
             await Connect();
         }
 
-        internal override Type getDiscType()
+        internal override Type GetDiscType()
         {
             return typeof(DiscSonyDVD);
         }
-        internal override Disc createDisc(string slot = null)
+        internal override Disc CreateDisc(string slot = null)
+
         {
             return new DiscSonyDVD(slot);
         }
@@ -1495,11 +1557,11 @@ namespace DiscChanger.Models
             await Connect();
         }
 
-        internal override Type getDiscType()
+        internal override Type GetDiscType()
         {
             return typeof(DiscSonyBD);
         }
-        internal override Disc createDisc(string slot = null)
+        internal override Disc CreateDisc(string slot = null)
         {
             return new DiscSonyBD(slot);
         }
@@ -1651,7 +1713,7 @@ namespace DiscChanger.Models
                             DiscSony.TOC toc = new DiscSony.TOC();
                             toc.PacketCount = dataPacketCount;
                             if (newDisc == null || newDisc.Slot != discNumberString || (newDisc as DiscSony)?.TableOfContents != null)
-                                newDisc = createDisc(discNumberString);
+                                newDisc = CreateDisc(discNumberString);
                             ((DiscSony)newDisc).TableOfContents = toc;
                         }
                         return true;
@@ -1675,7 +1737,7 @@ namespace DiscChanger.Models
             var count = i != -1 ? i - metaDataOffset : b.Length - metaDataOffset;
             return count > 0 ? Encoding.UTF8.GetString(b, metaDataOffset, count) : null;
         }
-        private string retrieveDiscInformation(DiscSonyBD.Information.DataType dataType, int track)
+        private string RetrieveDiscInformation(DiscSonyBD.Information.DataType dataType, int track)
         {
             byte trackL = (byte)(track & 0xFF);
             byte trackH = (byte)(track >> 8);
@@ -1718,14 +1780,14 @@ namespace DiscChanger.Models
                 newDiscBD.DiscIDData = oldDiscBD.DiscIDData;
                 return;
             }
-            di.AlbumOrDiscGenre = retrieveDiscInformation(DiscSonyBD.Information.DataType.AlbumOrDiscGenre, 0);
+            di.AlbumOrDiscGenre = RetrieveDiscInformation(DiscSonyBD.Information.DataType.AlbumOrDiscGenre, 0);
 
             if (di.DiscTypeString == "CDDA")
             {
                 di.TracksOrTitles = new List<DiscSonyBD.Information.TrackOrTitle>(newDiscBD.DiscData.TrackCount().Value);
                 for (int track = newDiscBD.DiscData.StartTrackTitleAlbum.Value; track <= newDiscBD.DiscData.LastTrackTitleAlbum.Value; track++)
                 {
-                    di.TracksOrTitles.Add(new DiscSonyBD.Information.TrackOrTitle(track, retrieveDiscInformation(DiscSonyBD.Information.DataType.TrackOrTitleName, track)));
+                    di.TracksOrTitles.Add(new DiscSonyBD.Information.TrackOrTitle(track, RetrieveDiscInformation(DiscSonyBD.Information.DataType.TrackOrTitleName, track)));
                 }
             }
             var id = newDiscBD.DiscIDData ?? new DiscSonyBD.IDData();

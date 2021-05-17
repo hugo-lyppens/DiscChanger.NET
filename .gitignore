@@ -341,8 +341,9 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
-/wwwroot/Discs/MusicBrainz/Art
-/wwwroot/Discs/MusicBrainz
+/wwwroot/Discs
 /wwwroot/DiscChangers.json
 /private
 *.old
+/wwwroot/Discs/GD3
+/GD3settings.json

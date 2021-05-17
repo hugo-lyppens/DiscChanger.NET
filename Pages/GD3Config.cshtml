@@ -1,0 +1,70 @@
+﻿@*
+    Copyright 2020 Hugo Lyppens
+
+    GD3Config.cshtml is part of DiscChanger.NET.
+
+    DiscChanger.NET is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    DiscChanger.NET is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with DiscChanger.NET.  If not, see <https://www.gnu.org/licenses/>.
+*@
+@page
+@model GD3Config
+@{
+    ViewData["Title"] = "GetDigitalData (GD3)";
+    ViewData["Description"] = $"GD3";
+    ViewData["Image"] = "";
+    var referrer = Request.Headers["Referer"];
+}
+<a target="_blank" class="config" href="https://www.getdigitaldata.com/GD3"><img src="https://www.getdigitaldata.com/images/GD3.jpg"/></a>
+<form method="post" aria-labelledby="legend">
+    <fieldset class="config">
+        <legend class="config">GD3 Authentication</legend>
+        <label asp-for="UserName">User Name</label>
+        @Html.PasswordFor(m => m.UserName)
+        <label asp-for="Password">Password</label>
+        @Html.PasswordFor(m => m.Password)
+        <br />
+        @if(Model.GetMetaDataGD3()?.CurrentLookupsRemaining==null)
+        {
+            <button type="submit" asp-page-handler="SetCredentials">Set GD3 Credentials</button>
+        }
+        else
+        {
+            <button type="submit" asp-page-handler="SetCredentials">Update GD3 Credentials</button>
+            <button type="submit" asp-page-handler="ClearCredentials">Clear GD3 Credentials</button>
+        }
+        </fieldset>
+    <table class="config">
+        <tr><td>Remaining CD lookups:</td><td class="config-value">@(Model.GetMetaDataGD3()?.CurrentLookupsRemaining?.CD?.ToString()??Model.GetMetaDataGD3()?.CurrentLookupsRemaining?.ErrorCD)</td></tr>
+        <tr><td>Remaining DVD lookups:</td><td class="config-value">@(Model.GetMetaDataGD3()?.CurrentLookupsRemaining?.DVD?.ToString() ?? Model.GetMetaDataGD3()?.CurrentLookupsRemaining?.ErrorDVD)</td></tr>
+    </table>
+    <fieldset class="config">
+        <legend class="config">Automatic lookup when scanning discs:</legend>
+        <p>DiscChanger.NET will retrieve basic metadata using GD3 match requests on every disc (assuming GD3 credentials valid), which will not count against your available lookups. For automatic full GD3 metadata retrieval per disc type, use these check boxes. It is also possible to perform GD3 matches and full metadata retrieval on existing discs, using the <i class="far fa-eye"></i> (Look up metadata) button.</p>
+        <div class="checkbox checkbox-primary">
+            @Html.CheckBoxFor(m => m.AutoCDLookup)<label asp-for="AutoCDLookup">CD</label>
+        </div>
+        <div class="checkbox checkbox-primary">
+            @Html.CheckBoxFor(m => m.AutoDVDLookup)<label asp-for="AutoDVDLookup">DVD</label>
+        </div>
+        <div class="checkbox checkbox-primary">
+            @Html.CheckBoxFor(m => m.AutoBDLookup)<label asp-for="AutoBDLookup">Blu-Ray</label>
+        </div>
+    </fieldset>
+    <br />
+    <button type="submit" asp-page-handler="Close">Close</button>
+    @if (Model.Message != null)
+    {
+        <h3>Message:</h3>
+        <pre>@Model.Message</pre>
+    }
+</form>

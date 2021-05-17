@@ -57,6 +57,50 @@ function setup_popover(jq) {
         sanitize: false
     });
 }
+function setup_metadata_dialog(jq) {
+    jq.on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        var changerName = button.data('changer-name'); // Extract info from data-* attributes
+        var changerKey = button.data('changer-key'); // Extract info from data-* attributes
+        // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+        // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+        var modal = this;
+        modal.querySelector('#metaDataModalLabel').textContent = 'Retrieve metadata for ' + changerName;
+        var sel = modal.querySelector('#metadata-selection');
+        var btn = modal.querySelector('#metadata-start-retrieval');
+        var slotsSet = modal.querySelector('#slots-set');
+        sel.selectedIndex = -1;
+        slotsSet.value = null;
+        slotsSet.disabled = true;
+        btn.disabled = true;
+        sel.onchange = function () {
+            slotsSet.disabled = false;
+            $.ajax({
+                url: '/?handler=MetaDataToRetrieve',
+                data: {
+                    changerKey: changerKey,
+                    metadataType: sel.value
+                }
+            }).done(function (result) {
+                slotsSet.value = result;
+                btn.disabled = !result;
+            }).fail(function (xhr, textStatus, errorThrown) {
+                alert(xhr.responseText);
+            });
+        };
+        slotsSet.oninput = function () { btn.disabled = !slotsSet.value;}
+        btn.onclick = function ()
+        {
+            var s = slotsSet.value;
+            var m = sel.value;
+            if (s && m) {
+                connection.invoke("RetrieveMetaData", changerKey, m, s).catch(function (err) {
+                    return console.error(err.toString());
+                });
+            }
+        }
+    });
+}
 
 function updateDisc(newChanger, newSlot, discHtml) {
     var newSlotInt = parseInt(newSlot, 10);
@@ -93,20 +137,21 @@ function updateDisc(newChanger, newSlot, discHtml) {
     insertedElement.scrollIntoView(false);
 }
 
-function scanStatus(changer, slot, index, count)
+function opStatus(op, changer, slot, index, count)
 {
-    document.getElementById("scan-status_" + changer).value = 'Scanning: ' + index + '/' + count + ', Slot: ' + slot;
+    document.getElementById("scan-status_" + changer).value = op+': ' + index + '/' + count + ', Slot: ' + slot;
 }
                 
-function scanInProgress(changer, flag)
+function opInProgress(changer, op)
 {
-    document.getElementById("controls_" + changer).style.display = flag ? 'none' : 'block';
-    document.getElementById("scan-controls_" + changer).style.display = flag ? 'block' : 'none';
-    document.getElementById("scan-status_" + changer).value = flag ? 'Starting Disc Scan' : null;
-    document.getElementById("disc_number_" + changer).style.readonly = flag;
-    document.getElementById("title_album_number_" + changer).style.readonly = flag;
-    document.getElementById("chapter_track_number_" + changer).style.readonly = flag;
-    document.getElementById("disc_direct_" + changer).style.display = flag ? 'none' : 'inline-block';
+    var b = Boolean(op);
+    document.getElementById("controls_" + changer).style.display = b ? 'none' : 'block';
+    document.getElementById("scan-controls_" + changer).style.display = b ? 'block' : 'none';
+    document.getElementById("scan-status_" + changer).value = b ? 'Starting '+op : null;
+    document.getElementById("disc_number_" + changer).style.readonly = b;
+    document.getElementById("title_album_number_" + changer).style.readonly = b;
+    document.getElementById("chapter_track_number_" + changer).style.readonly = b;
+    document.getElementById("disc_direct_" + changer).style.display = b ? 'none' : 'inline-block';
 }
 
 function reload() {
@@ -115,8 +160,8 @@ function reload() {
 
 connection.on("StatusData", updateControls);
 connection.on("DiscData", updateDisc);
-connection.on("ScanStatus", scanStatus);
-connection.on("ScanInProgress", scanInProgress);
+connection.on("OpStatus", opStatus);
+connection.on("OpInProgress", opInProgress);
 connection.on("Reload", reload);
 connection.start().then(function () {
 }).catch(function (err) {
@@ -156,6 +201,7 @@ function scan(key, name) {
         }
     });
 }
+
 
 function deleteChanger(key, name) {
     var discsCount = document.getElementById('discs-table').querySelectorAll('[data-changer="' + key + '"]').length;
@@ -227,8 +273,8 @@ function deleteDiscs(key, name) {
     });
 }
 
-function cancelScan(changerKey) {
-    connection.invoke("CancelScan", changerKey).catch(function (err) {
+function cancelOp(changerKey) {
+    connection.invoke("CancelOp", changerKey).catch(function (err) {
         return console.error(err.toString());
     });
 }

@@ -27,10 +27,10 @@ using System.Threading.Tasks;
 
 namespace DiscChanger.Pages
 {
-    [BindProperties(SupportsGet=true)]
+    [BindProperties(SupportsGet = true)]
     public class DiscChangerConfig : PageModel
     {
-        public Dictionary<string, object> OnChangeSubmit = new Dictionary<string, object> {{"onchange", "document.changer.submit()"}};
+        public Dictionary<string, object> OnChangeSubmit = new Dictionary<string, object> { { "onchange", "document.changer.submit()" } };
         private IConfiguration _config;
         [FromQuery]
         public string Key { get; set; }
@@ -45,7 +45,7 @@ namespace DiscChanger.Pages
         public string Cancel { get; set; }
         public IEnumerable<string> SerialPortNames;// = new string[] { };
         public IEnumerable<string> ConnectionTypes;// = null;// new string[] { };
-        public string TestResult=null;
+        public string TestResult = null;
         public string HardwareFlowControl { get; set; }
 
         private DiscChangerService discChangerService;
@@ -77,7 +77,7 @@ namespace DiscChanger.Pages
                     Connection = DiscChanger.Models.DiscChanger.CONNECTION_SERIAL_PORT;
                     ConnectionTypes = new string[] { DiscChanger.Models.DiscChanger.CONNECTION_SERIAL_PORT }; break;
                 case DiscChangerSonyBD.BDP_CX7000ES:
-                    CommandMode ??= DiscChangerSonyBD.CommandModes[0];  
+                    CommandMode ??= DiscChangerSonyBD.CommandModes[0];
                     Connection ??= DiscChanger.Models.DiscChanger.CONNECTION_SERIAL_PORT;
                     ConnectionTypes = new string[] { DiscChanger.Models.DiscChanger.CONNECTION_SERIAL_PORT, DiscChanger.Models.DiscChanger.CONNECTION_NETWORK }; break;
             }
@@ -86,7 +86,8 @@ namespace DiscChanger.Pages
             {
                 HardwareFlowControl ??= "true";
                 SerialPortNames = Array.FindAll(SerialPort.GetPortNames(), p => discChangerService.DiscChangers.All(dc => dc == discChanger || dc.PortName != p));
-            } else if (Connection == DiscChanger.Models.DiscChanger.CONNECTION_NETWORK)
+            }
+            else if (Connection == DiscChanger.Models.DiscChanger.CONNECTION_NETWORK)
             {
                 NetworkPort ??= 6001;
                 SerialPortNames = null;
@@ -95,7 +96,7 @@ namespace DiscChanger.Pages
         //        public async Task<IActionResult> OnGetAsync()
         public IActionResult OnGet()
         {
-            if (Key!=null)
+            if (Key != null)
                 updateModel(Key);
             return Page();
         }
@@ -134,7 +135,7 @@ namespace DiscChanger.Pages
                 case "Cancel":
                     return RedirectToPage("Index");
                 case "Test":
-                    if(valid)
+                    if (valid)
                         this.TestResult = await discChangerService.Test(Key, Type, Connection, CommandMode, pn, hfc, nh, np);
                     break;
             }

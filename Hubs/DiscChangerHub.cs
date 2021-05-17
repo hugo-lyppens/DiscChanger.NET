@@ -24,7 +24,7 @@ using DiscChanger.Models;
 
 namespace DiscChanger.Hubs
 {
-    public class DiscChangerHub: Hub
+    public class DiscChangerHub : Hub
     {
         public DiscChangerService discChangerService;
         private readonly Microsoft.Extensions.Logging.ILogger<DiscChangerHub> _logger;
@@ -58,7 +58,7 @@ namespace DiscChanger.Hubs
             }
             catch (Exception e)
             {
-                System.Diagnostics.Debug.WriteLine("Exception from DiscDirect " + changerKey + '/' + Convert.ToString(discNumber) + '/' + Convert.ToString(titleAlbumNumber) + '/' + Convert.ToString(chapterTrackNumber) + ": "+e.Message);
+                System.Diagnostics.Debug.WriteLine("Exception from DiscDirect " + changerKey + '/' + Convert.ToString(discNumber) + '/' + Convert.ToString(titleAlbumNumber) + '/' + Convert.ToString(chapterTrackNumber) + ": " + e.Message);
             }
         }
         public void Scan(string changerKey, string discSet)
@@ -72,11 +72,22 @@ namespace DiscChanger.Hubs
                 System.Diagnostics.Debug.WriteLine("Exception from Scan " + changerKey + '/' + discSet + ": " + e.Message);
             }
         }
-        public void CancelScan(string changerKey)
+        public void RetrieveMetaData(string changerKey, string metaDataType, string discSet)
         {
             try
             {
-                discChangerService.Changer(changerKey).CancelScan();
+                _ = discChangerService.Changer(changerKey).RetrieveMetaData(metaDataType, discSet);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine("Exception from metadata retrieval" + changerKey + '/' + metaDataType + '/' + discSet + ": " + e.Message);
+            }
+        }
+        public void CancelOp(string changerKey)
+        {
+            try
+            {
+                discChangerService.Changer(changerKey).CancelOp();
             }
             catch (Exception e)
             {

@@ -37,6 +37,7 @@ namespace DiscChanger
                 hubOptions.EnableDetailedErrors = true;
                 hubOptions.ClientTimeoutInterval = TimeSpan.FromMinutes(6);
             });
+            services.AddDataProtection();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -58,7 +59,7 @@ namespace DiscChanger
 
             app.UseRouting();
 
-//            app.UseAuthorization();
+            //            app.UseAuthorization();
             //app.UseCors("AllowAll");
             //app.UseCors(
             //    options => options.SetIsOriginAllowed(x => _ = true).AllowAnyMethod().AllowAnyHeader().AllowCredentials()

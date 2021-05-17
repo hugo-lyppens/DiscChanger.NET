@@ -44,9 +44,9 @@ namespace DiscChanger.Pages
             string discSet;
             try
             {
-                discSet = discChangerService.Changer(changerKey).getDiscsToScan();
+                discSet = discChangerService.Changer(changerKey).GetDiscsToScan();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 discSet = "Error: " + e.Message;
             }
@@ -57,7 +57,7 @@ namespace DiscChanger.Pages
             string discSet;
             try
             {
-                discSet = discChangerService.Changer(changerKey).getDiscsToDelete();
+                discSet = discChangerService.Changer(changerKey).GetDiscsToDelete();
             }
             catch (Exception e)
             {
@@ -70,16 +70,17 @@ namespace DiscChanger.Pages
             string discSet;
             try
             {
+
                 discSet = discChangerService.Changer(changerKey).GetPopulatedSlots(slotsSet);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 discSet = "";
             }
             return new JsonResult(discSet);
         }
 
-        public JsonResult OnGetValidateDiscShift( string changerKey,
+        public JsonResult OnGetValidateDiscShift(string changerKey,
                         string slotsSet,
                         int offset)
         {
@@ -88,12 +89,25 @@ namespace DiscChanger.Pages
             {
                 discSet = discChangerService.Changer(changerKey).GetDiscsShiftDestination(slotsSet, offset);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 discSet = "";
             }
             return new JsonResult(discSet);
         }
+        public JsonResult OnGetMetaDataToRetrieve(string changerKey, string metaDataType)
+        {
+            string discSet;
+            try
+            {
+                discSet = discChangerService.Changer(changerKey).GetMetaDataToRetrieve(metaDataType);
 
+            }
+            catch (Exception e)
+            {
+                discSet = "Error: " + e.Message;
+            }
+            return new JsonResult(discSet);
+        }
     }
 }

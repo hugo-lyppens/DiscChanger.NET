@@ -1,4 +1,21 @@
-﻿using System;
+﻿/*  Copyright 2020 Hugo Lyppens
+
+    DiscChangerConverter.cs is part of DiscChanger.NET.
+
+    DiscChanger.NET is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    DiscChanger.NET is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with DiscChanger.NET.  If not, see <https://www.gnu.org/licenses/>.
+*/
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,7 +26,7 @@ using MetaBrainz.MusicBrainz.DiscId.Standards;
 
 namespace DiscChanger.Models
 {
-    public class DiscChangerConverter: JsonConverter<DiscChanger>
+    public class DiscChangerConverter : JsonConverter<DiscChanger>
     {
         public override bool CanConvert(Type typeToConvert) =>
             typeof(DiscChanger).IsAssignableFrom(typeToConvert);
@@ -26,7 +43,7 @@ namespace DiscChanger.Models
             {
                 if (reader.TokenType == JsonTokenType.EndObject)
                 {
-                    if(discChanger==null)
+                    if (discChanger == null)
                         throw new JsonException();
                     var discChangerType = discChanger.GetType();
                     foreach (var pv in propertyValues)
@@ -49,12 +66,12 @@ namespace DiscChanger.Models
                                 throw new JsonException();
                             if (reader.TokenType != JsonTokenType.Null)
                             {
-                                Type discType = discChanger.getDiscType();
+                                Type discType = discChanger.GetDiscType();
                                 Type discArrayType = discType.MakeArrayType();
                                 Disc[] discList = (Disc[])JsonSerializer.Deserialize(ref reader, discArrayType, options);
                                 foreach (var d in discList)
                                 {
-                                    discChanger.setDisc(d.Slot, d);
+                                    discChanger.SetDisc(d.Slot, d);
                                 }
                             }
                             break;
@@ -87,7 +104,7 @@ namespace DiscChanger.Models
             int i = 0;
             foreach (var kvp in discChanger.Discs)
             {
-                dl[i++]=kvp.Value;
+                dl[i++] = kvp.Value;
             }
             Array.Sort(dl, (x, y) => ((Disc)x).CompareTo((Disc)y));
             JsonSerializer.Serialize(writer, dl, options);

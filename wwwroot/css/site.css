@@ -3,7 +3,25 @@ for details on configuring this project to bundle and minify static web assets. 
 .changer-name {
     cursor: pointer; /* Mouse pointer on hover */
 }
-
+fieldset.config {
+    width: auto;
+    border: 1px solid black;
+    background-color: lightgrey;
+    display: inline;
+}
+table.config {
+    border: 1px solid black;
+    background-color: lightgrey;
+}
+table.config td {
+    border: 1px solid black;
+}
+td.config-value {
+    background-color: white;
+}
+legend.config {
+    width: auto;
+}
 .btn {
     background-color: steelblue; /* #64A0c8Blue background */
     border: none; /* Remove borders */
@@ -93,6 +111,11 @@ button.config
 }
 
 .controls-table {
+    border: 2px solid black;
+    background: lightgrey;
+}
+
+.changer-table {
     border: 2px solid black;
     background: lightgrey;
 }
