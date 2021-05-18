@@ -60,7 +60,14 @@ namespace DiscChanger.Models
             public GD3.AlbumMeta AlbumMeta { get; set; }
             public IEnumerable<MetaDataProvider.Track> GetTracks()
             {
-                return AlbumMeta?.trackMeta?.Select(tm => new MetaDataProvider.Track { Title = tm.TrackName, Position = tm.TrackNumber, Length = TimeSpan.FromMilliseconds(tm.TrackLength) });
+                var tm = AlbumMeta?.trackMeta;
+                if (tm == null || tm.Length==0)
+                    return null;
+                //Data quality issue: sometimes the GD3 track lengths are in seconds, sometimes in milliseconds. If longest track is less than 10,000, assume unit is seconds
+                if(Enumerable.Max(tm.Select(t=>t.TrackLength))<10000)
+                    return tm.Select(t => new MetaDataProvider.Track { Title = t.TrackName, Position = t.TrackNumber, Length = TimeSpan.FromSeconds(t.TrackLength) });
+                else
+                    return tm.Select(t => new MetaDataProvider.Track { Title = t.TrackName, Position = t.TrackNumber, Length = TimeSpan.FromMilliseconds(t.TrackLength) });
             }
         }
         public class MetaDataDVD : MetaData
@@ -78,6 +85,7 @@ namespace DiscChanger.Models
             public abstract string GetArtFileURL();
             public abstract string GetTitle();
             public abstract string GetArtist();
+            public virtual string GetPlot() { return null; }
 
 
             public abstract bool HasMetaData();
@@ -218,6 +226,7 @@ namespace DiscChanger.Models
                     fn = FrontCoverImages[SelectedMatch.Value];
                 return fn != null ? RelPath() + '/' + HttpUtility.UrlEncode(fn) : null;
             }
+            public override string GetPlot() { return metaData?.DVDMeta?.Plot; }
 
             static string GetTitlePlusDisc(GD3DVD.DVDMeta dvdMeta)
             {
@@ -299,6 +308,7 @@ namespace DiscChanger.Models
                     {
                         backCoverImageFileName = await WriteImage(bc, path, $"MetaBackCover_{title}_{dvdCode}");
                     }
+                    dvdMeta.BackCover = null;
                 }
                 var m = new MetaDataDVD
                 {
@@ -377,7 +387,7 @@ namespace DiscChanger.Models
         private IDataProtector _protector;
         public void SetCredentials(string userName, string passWord)
         {
-            if (!String.IsNullOrEmpty(userName) || !String.IsNullOrEmpty(passWord))
+            if (!String.IsNullOrEmpty(userName) && !String.IsNullOrEmpty(passWord))
             {
                 settings.UserName = _protector.Protect(userName);
                 settings.Password = _protector.Protect(passWord);
@@ -474,29 +484,29 @@ namespace DiscChanger.Models
 
             foreach (var fileInfo in dirGD3CD.GetFiles("Match_*.json"))
             {
-                MatchCD d = JsonSerializer.Deserialize<MatchCD>(File.ReadAllText(fileInfo.FullName));
-                d.SetMetaDataGD3(this);
+                MatchCD m = JsonSerializer.Deserialize<MatchCD>(File.ReadAllText(fileInfo.FullName));
+                m.SetMetaDataGD3(this);
                 string baseName = Path.GetFileNameWithoutExtension(fileInfo.Name);
-                nameToMatchCD[baseName] = d;
-                lengths2NameCD[d.Lengths] = baseName;
+                nameToMatchCD[baseName] = m;
+                lengths2NameCD[m.Lengths] = baseName;
             }
             foreach (var fileInfo in dirGD3DVD.GetFiles("Match_*.json"))
             {
-                MatchDVD d = JsonSerializer.Deserialize<MatchDVD>(File.ReadAllText(fileInfo.FullName));
-                d.SetMetaDataGD3(this);
+                MatchDVD m = JsonSerializer.Deserialize<MatchDVD>(File.ReadAllText(fileInfo.FullName));
+                m.SetMetaDataGD3(this);
                 string baseName = Path.GetFileNameWithoutExtension(fileInfo.Name);
-                nameToMatchDVD[baseName] = d;
-                if (!String.IsNullOrEmpty(d.GraceNoteDiscID))
-                    graceNoteID2NameDVD[d.GraceNoteDiscID] = baseName;
+                nameToMatchDVD[baseName] = m;
+                if (!String.IsNullOrEmpty(m.GraceNoteDiscID))
+                    graceNoteID2NameDVD[m.GraceNoteDiscID] = baseName;
             }
             foreach (var fileInfo in dirGD3BD.GetFiles("Match_*.json"))
             {
-                MatchBD d = JsonSerializer.Deserialize<MatchBD>(File.ReadAllText(fileInfo.FullName));
-                d.SetMetaDataGD3(this);
+                MatchBD m = JsonSerializer.Deserialize<MatchBD>(File.ReadAllText(fileInfo.FullName));
+                m.SetMetaDataGD3(this);
                 string baseName = Path.GetFileNameWithoutExtension(fileInfo.Name);
-                nameToMatchBD[baseName] = d;
-                if (d.AACSDiscID != null && d.AACSDiscID.Length > 0)
-                    AACSDiscID2NameBD[d.AACSDiscID] = baseName;
+                nameToMatchBD[baseName] = m;
+                if (m.AACSDiscID != null && m.AACSDiscID.Length > 0)
+                    AACSDiscID2NameBD[m.AACSDiscID] = baseName;
             }
             foreach (var fileInfo in dirGD3CD.GetFiles("Meta_*.json"))
             {
@@ -511,7 +521,7 @@ namespace DiscChanger.Models
         }
 
 
-        internal bool AutoLookupEnabled(Disc d)
+        public bool AutoLookupEnabled(Disc d)
         {
             return (settings.AutoCDLookup && d.IsCD()) ||
                    (settings.AutoDVDLookup && d.IsDVD()) ||

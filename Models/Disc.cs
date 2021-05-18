@@ -155,6 +155,9 @@ namespace DiscChanger.Models
                 sb.Append(HtmlEncode(t));
             sb.Append(@"</div>");
             sb.Append(@"<div class=""data"" style=""display:none"">");
+            var plot = DataGD3Match?.GetPlot();
+            if (!String.IsNullOrEmpty(plot))
+                sb.Append(HtmlEncode(plot));
             var tracks = GetTracks();
             if (tracks != null)
             {
@@ -172,7 +175,7 @@ namespace DiscChanger.Models
                     sb.Append(@"</td></tr>");
                 }
                 sb.Append(@"</table>");
-            }
+            } 
             if (DataMusicBrainz != null)
             {
                 sb.Append(@"<div class=""urls"">");
