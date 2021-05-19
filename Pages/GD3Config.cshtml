@@ -28,12 +28,13 @@
 <form method="post" aria-labelledby="legend">
     <fieldset class="config">
         <legend class="config">GD3 Authentication</legend>
-        <label asp-for="UserName">User Name</label>
-        @Html.PasswordFor(m => m.UserName)
-        <label asp-for="Password">Password</label>
-        @Html.PasswordFor(m => m.Password)
-        <br />
-        @if(Model.GetMetaDataGD3()?.CurrentLookupsRemaining==null)
+        <p>
+            <label asp-for="UserName">User Name</label>
+            @Html.PasswordFor(m => m.UserName)
+            <label asp-for="Password">Password</label>
+            @Html.PasswordFor(m => m.Password)
+        </p>
+        @if (Model.GetMetaDataGD3()?.CurrentLookupsRemaining == null)
         {
             <button type="submit" asp-page-handler="SetCredentials">Set GD3 Credentials</button>
         }
@@ -42,13 +43,15 @@
             <button type="submit" asp-page-handler="SetCredentials">Update GD3 Credentials</button>
             <button type="submit" asp-page-handler="ClearCredentials">Clear GD3 Credentials</button>
         }
-        </fieldset>
+    </fieldset>
+    <br />
     <table class="config">
         <tr><td>Remaining CD lookups:</td><td class="config-value">@(Model.GetMetaDataGD3()?.CurrentLookupsRemaining?.CD?.ToString()??Model.GetMetaDataGD3()?.CurrentLookupsRemaining?.ErrorCD)</td></tr>
         <tr><td>Remaining DVD lookups:</td><td class="config-value">@(Model.GetMetaDataGD3()?.CurrentLookupsRemaining?.DVD?.ToString() ?? Model.GetMetaDataGD3()?.CurrentLookupsRemaining?.ErrorDVD)</td></tr>
     </table>
+    <br />
     <fieldset class="config">
-        <legend class="config">Automatic lookup when scanning discs:</legend>
+        <legend class="config">Automatic lookup when scanning discs</legend>
         <p>DiscChanger.NET will retrieve basic metadata using GD3 match requests on every disc (assuming GD3 credentials valid), which will not count against your available lookups. For automatic full GD3 metadata retrieval per disc type, use these check boxes. It is also possible to perform GD3 matches and full metadata retrieval on existing discs, using the <i class="far fa-eye"></i> (Look up metadata) button.</p>
         <div class="checkbox checkbox-primary">
             @Html.CheckBoxFor(m => m.AutoCDLookup)<label asp-for="AutoCDLookup">CD</label>

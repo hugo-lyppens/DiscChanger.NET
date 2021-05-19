@@ -135,6 +135,9 @@ button.config
     color: orange;
 }
 
+.popover-header .btn-close {
+    float:right;
+}
 
 .popover a {
     text-overflow: ellipsis;
@@ -173,4 +176,3 @@ button.config
 .tracks {
     width: 100%;
 }
-

@@ -4,7 +4,7 @@
   "libraries": [
     {
       "provider": "cdnjs",
-      "library": "jquery@3.5.1",
+      "library": "jquery@3.6.0",
       "destination": "wwwroot/lib/jquery/",
       "files": [
         "jquery.js",
@@ -16,7 +16,7 @@
       ]
     },
     {
-      "library": "bootstrap@4.5.3",
+      "library": "bootstrap@5.0.1",
       "destination": "wwwroot/lib/bootstrap/",
       "files": [
         "dist/css/bootstrap-grid.css",
@@ -43,7 +43,7 @@
     },
     {
       "provider": "cdnjs",
-      "library": "microsoft-signalr@5.0.0",
+      "library": "microsoft-signalr@5.0.5",
       "destination": "wwwroot/lib/microsoft-signalr/",
       "files": [
         "signalr.min.js"
@@ -51,7 +51,7 @@
     },
     {
       "provider": "cdnjs",
-      "library": "font-awesome@5.15.1",
+      "library": "font-awesome@5.15.3",
       "destination": "wwwroot/lib/font-awesome/",
       "files": [
         "css/all.min.css",

@@ -12,19 +12,19 @@
 <nav class="navbar navbar-expand-md sticky-top navbar-light bg-secondary">
     <a href="http://discchanger.net"><img class="navbar-brand" src="img/SonyDVP-CX777ES600.png" /></a>
     <div class="container">
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        
+
         <div class="boxed">
             <div>
-            <button id="edit" class="btn btn-settings" onclick="toggle_config()"><i title="Toggle access to settings" class="fas fa-cogs fa-lg"></i></button>
+                <button id="edit" class="btn btn-settings" onclick="toggle_config()"><i title="Toggle access to settings" class="fas fa-cogs fa-lg"></i></button>
             </div><div>
-            <input type="range" title="Disc Display Size (@(discDisplaySize)rem)" min="10" max="50" id="disc_display_size" onchange="change_display_size(this)" class="disc-display-size-slider" value="@discDisplaySize" />
+                <input type="range" title="Disc Display Size (@(discDisplaySize)rem)" min="10" max="50" id="disc_display_size" onchange="change_display_size(this)" class="disc-display-size-slider" value="@discDisplaySize" />
             </div>
         </div>
-        <div class="navbar-collapse collapse mb-lg-0 ml-3" id="navbarSupportedContent">
-            <ul class="nav navbar-nav">
+        <div class="navbar-collapse collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-lg-0 ml-3">
                 <li class="nav-item">
                     <table class="controls-table">
                         @{
@@ -45,52 +45,52 @@
                                 var name = dc.Name;
                                 var key = dc.Key;
                                 var changerType = dc.Type;
-                            <tr class="disc-changer" data-key="@key">
-                                <td class="changer-name" id="name_@key" title="Click to scroll current disc into view" onclick="scroll_into_view('@key')">@name</td>
-                                <td>
-                                    <div id="controls_@key" style="display:@controlsDisplay;">
-                                        <button id="power_@key" class="btn btn-power" title="Toggle disc changer power" onclick="control('@key','power')"><i class="fas fa-power-off fa-lg"></i></button>
-                                        <button id="open_@key" class="btn" @Html.Raw(dc.SupportsCommand("open") ? "title=\"Open/Close door\"" : "title=\"Unsupported on " + changerType + ": Open/Close door\" data-disabled=\"true\"") onclick="control('@key','open')"><i class="fas fa-door-open fa-lg"></i></button>
-                                        <button id="previous_@key" class="btn" title="Previous track" onclick="control('@key','previous')"><i class="fas fa-fast-backward fa-lg"></i></button>
-                                        <button id="next_@key" class="btn" title="Next track" onclick="control('@key','next')"><i class="fas fa-fast-forward fa-lg"></i></button>
-                                        <button id="rev_scan_@key" class="btn" title="Reverse scan" onclick="control('@key','rev_scan')"><i class="fas fa-backward fa-lg"></i></button>
-                                        <button id="fwd_scan_@key" class="btn" title="Forward scan" onclick="control('@key','fwd_scan')"><i class="fas fa-forward fa-lg"></i></button>
-                                        <button id="play_@key" class="btn" title="Play" onclick="control('@key','play')"><i class="far fa-play-circle fa-lg"></i></button>
-                                        <button id="pause_@key" class="btn" title="Pause" onclick="control('@key','pause')"><i class="far fa-pause-circle fa-lg"></i></button>
-                                        <button id="stop_@key" class="btn" title="Stop" onclick="control('@key','stop')"><i class="far fa-stop-circle fa-lg"></i></button>
-                                        <button id="time_text_@key" class="btn" title="Time/Text" onclick="control('@key','time_text')"><i class="fas fa-remove-format fa-lg"></i></button>
-                                        <button id="discs_@key" class="btn" title="Toggle all discs vs. one disc" onclick="control('@key','discs')"><i class="fas fa-compact-disc fa-lg"></i></button>
-                                        <button id="scan_@key" class="btn" title="Prompt to start scanning given set of discs" onclick="scan('@key',&quot;@name&quot;)"><i class="fas fa-coins fa-lg"></i></button>
-                                        <button id="delete-discs_@key" class="btn" title="Prompt for set of discs to delete" onclick="deleteDiscs('@key',&quot;@name&quot;)"><i class="fas fa-minus-circle fa-lg"></i></button>
-                                        <button id="metadata_@key" class="btn" data-toggle="modal" data-target="#metaDataModal" data-changer-key='@key' data-changer-name="@name" title="Prompt for set of slots to retrieve metadata for" ><i class="fas fa-eye fa-lg"></i></button>
-                                    </div>
-                                    <div id="scan-controls_@key" style="display:@scanControlsDisplay;">
-                                        <input readonly title="Status" id="scan-status_@key" size="40" value="@opStatusString" />
-                                        <button id="cancel-scan_@key" onclick="cancelOp('@key')">Cancel Operation</button>
-                                    </div>
-                                </td>
-                                <td class="hide-on-config">
-                                    <fieldset>
-                                        <input type="number" title="Disc Number" name="disc_number_@key" min="1" max="400" id="disc_number_@key" onchange="clear_title_album_chapter_track('@key')" />
-                                        <input type="number" title="Title/Album Number" name="title_album_number_@key" min="1" max="499" id="title_album_number_@key" />
-                                        <input type="number" title="Chapter/Track Number" name="chapter_track_number_@key" min="1" max="999" id="chapter_track_number_@key" />
-                                        <button id="disc_direct_@key" onclick="discDirect('@key')">Go</button>
-                                    </fieldset>
-                                </td>
-                                <td hidden class="config">
-                                    <a hidden asp-page="DiscChangerConfig" asp-route-key="@key" title="Go to changer config page" class="config"><button id="edit_@key" class="btn config" type="button"><i class="fas fa-cog fa-lg"></i></button></a>
-                                    <button id="shift_discs_@key" class="btn config" type="button" title="Shift a set of discs to new position" onclick="return shiftDiscs('@key',&quot;@name&quot;)"><i class="fas fa-dolly fa-lg"></i></button>
-                                    <button id="delete_@key" class="btn config" type="button" title="Delete disc changer" onclick="return deleteChanger('@key',&quot;@name&quot;)"><i class="fas fa-trash-alt fa-lg"></i></button>
-                                    @if (dci > 0)
-                                    {
-                                        <button id="up_@key" class="btn config" type="button" title="Move changer up one position" onclick="moveChanger(&quot;@key&quot;,-1)"><i class="fas fa-sort-up fa-lg"></i></button>
-                                    }
-                                    @if (dci < discChangerCount - 1)
-                                    {
-                                        <button id="down_@key" class="btn config" type="button" title="Move changer down one position" onclick="moveChanger(&quot;@key&quot;,1)"><i class="fas fa-sort-down fa-lg"></i></button>
-                                    }
-                                </td>
-                            </tr>
+                                <tr class="disc-changer" data-key="@key">
+                                    <td class="changer-name" id="name_@key" title="Click to scroll current disc into view" onclick="scroll_into_view('@key')">@name</td>
+                                    <td>
+                                        <div id="controls_@key" style="display:@controlsDisplay;">
+                                            <button id="power_@key" class="btn btn-power" title="Toggle disc changer power" onclick="control('@key','power')"><i class="fas fa-power-off fa-lg"></i></button>
+                                            <button id="open_@key" class="btn" @Html.Raw(dc.SupportsCommand("open") ? "title=\"Open/Close door\"" : "title=\"Unsupported on " + changerType + ": Open/Close door\" data-disabled=\"true\"") onclick="control('@key','open')"><i class="fas fa-door-open fa-lg"></i></button>
+                                            <button id="previous_@key" class="btn" title="Previous track" onclick="control('@key','previous')"><i class="fas fa-fast-backward fa-lg"></i></button>
+                                            <button id="next_@key" class="btn" title="Next track" onclick="control('@key','next')"><i class="fas fa-fast-forward fa-lg"></i></button>
+                                            <button id="rev_scan_@key" class="btn" title="Reverse scan" onclick="control('@key','rev_scan')"><i class="fas fa-backward fa-lg"></i></button>
+                                            <button id="fwd_scan_@key" class="btn" title="Forward scan" onclick="control('@key','fwd_scan')"><i class="fas fa-forward fa-lg"></i></button>
+                                            <button id="play_@key" class="btn" title="Play" onclick="control('@key','play')"><i class="far fa-play-circle fa-lg"></i></button>
+                                            <button id="pause_@key" class="btn" title="Pause" onclick="control('@key','pause')"><i class="far fa-pause-circle fa-lg"></i></button>
+                                            <button id="stop_@key" class="btn" title="Stop" onclick="control('@key','stop')"><i class="far fa-stop-circle fa-lg"></i></button>
+                                            <button id="time_text_@key" class="btn" title="Time/Text" onclick="control('@key','time_text')"><i class="fas fa-remove-format fa-lg"></i></button>
+                                            <button id="discs_@key" class="btn" title="Toggle all discs vs. one disc" onclick="control('@key','discs')"><i class="fas fa-compact-disc fa-lg"></i></button>
+                                            <button id="scan_@key" class="btn" title="Prompt to start scanning given set of discs" onclick="scan('@key',&quot;@name&quot;)"><i class="fas fa-coins fa-lg"></i></button>
+                                            <button id="delete-discs_@key" class="btn" title="Prompt for set of discs to delete" onclick="deleteDiscs('@key',&quot;@name&quot;)"><i class="fas fa-minus-circle fa-lg"></i></button>
+                                            <button id="metadata_@key" class="btn" data-bs-toggle="modal" data-bs-target="#metaDataModal" data-changer-key='@key' data-changer-name="@name" title="Prompt for set of slots to retrieve metadata for"><i class="fas fa-eye fa-lg"></i></button>
+                                        </div>
+                                        <div id="scan-controls_@key" style="display:@scanControlsDisplay;">
+                                            <input readonly title="Status" id="scan-status_@key" size="40" value="@opStatusString" />
+                                            <button id="cancel-scan_@key" onclick="cancelOp('@key')">Cancel Operation</button>
+                                        </div>
+                                    </td>
+                                    <td class="hide-on-config">
+                                        <fieldset>
+                                            <input type="number" title="Disc Number" name="disc_number_@key" min="1" max="400" id="disc_number_@key" onchange="clear_title_album_chapter_track('@key')" />
+                                            <input type="number" title="Title/Album Number" name="title_album_number_@key" min="1" max="499" id="title_album_number_@key" />
+                                            <input type="number" title="Chapter/Track Number" name="chapter_track_number_@key" min="1" max="999" id="chapter_track_number_@key" />
+                                            <button id="disc_direct_@key" onclick="discDirect('@key')">Go</button>
+                                        </fieldset>
+                                    </td>
+                                    <td hidden class="config">
+                                        <a hidden asp-page="DiscChangerConfig" asp-route-key="@key" title="Go to changer config page" class="config"><button id="edit_@key" class="btn config" type="button"><i class="fas fa-cog fa-lg"></i></button></a>
+                                        <button id="shift_discs_@key" class="btn config" type="button" title="Shift a set of discs to new position" onclick="return shiftDiscs('@key',&quot;@name&quot;)"><i class="fas fa-dolly fa-lg"></i></button>
+                                        <button id="delete_@key" class="btn config" type="button" title="Delete disc changer" onclick="return deleteChanger('@key',&quot;@name&quot;)"><i class="fas fa-trash-alt fa-lg"></i></button>
+                                        @if (dci > 0)
+                                        {
+                                            <button id="up_@key" class="btn config" type="button" title="Move changer up one position" onclick="moveChanger(&quot;@key&quot;,-1)"><i class="fas fa-sort-up fa-lg"></i></button>
+                                        }
+                                        @if (dci < discChangerCount - 1)
+                                        {
+                                            <button id="down_@key" class="btn config" type="button" title="Move changer down one position" onclick="moveChanger(&quot;@key&quot;,1)"><i class="fas fa-sort-down fa-lg"></i></button>
+                                        }
+                                    </td>
+                                </tr>
 
                             }
                         }
@@ -111,40 +111,41 @@
     </div>
 </nav>
 <div class="discs" id="discs-table" style="grid-template-columns:repeat(auto-fill,minmax(@(discDisplaySize)rem,1fr))">
-@{
-    for (int dci = 0; dci < discChangerCount; dci++)
-    {
-        Models.DiscChanger dc = dcs.DiscChangers[dci];
-        var key = dc.Key;
-        var changerName = dc.Name;
-        Models.DiscChanger.Status status = dc.CurrentStatus();
-        <script>updateControls('@key', @(status?.discNumber?.ToString()??"null"), @(status?.titleAlbumNumber?.ToString() ?? "null"), @(status?.chapterTrackNumber?.ToString() ?? "null"), '@(status?.statusString??"off")', '@(status?.modeDisc)');</script>
-        var discs = dc.Discs;
-        if (discs != null) {
-            lock (discs) {
-                var l = discs.ToList();
-                l.Sort(Models.Disc.SlotDiscPairComparer);
-                foreach (var kvp in l)
+    @{
+        for (int dci = 0; dci < discChangerCount; dci++)
+        {
+            Models.DiscChanger dc = dcs.DiscChangers[dci];
+            var key = dc.Key;
+            var changerName = dc.Name;
+            Models.DiscChanger.Status status = dc.CurrentStatus();
+            <script>updateControls('@key', @(status?.discNumber?.ToString()??"null"), @(status?.titleAlbumNumber?.ToString() ?? "null"), @(status?.chapterTrackNumber?.ToString() ?? "null"), '@(status?.statusString??"off")', '@(status?.modeDisc)');</script>
+            var discs = dc.Discs;
+            if (discs != null)
+            {
+                lock (discs)
                 {
-                    var d = kvp.Value;
-                    @Html.Raw(d.ToHtml());
+                    var l = discs.ToList();
+                    l.Sort(Models.Disc.SlotDiscPairComparer);
+                    foreach (var kvp in l)
+                    {
+                        var d = kvp.Value;
+                        @Html.Raw(d.ToHtml());
+                    }
                 }
             }
         }
     }
-}
 </div>
 <div class="modal fade" id="metaDataModal" tabindex="-1" role="dialog" aria-labelledby="metaDataModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="metaDataModalLabel">Retrieve metadata</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                 </button>
             </div>
             <div class="modal-body">
-@*<form>*@
+                <form>
                     <select id="metadata-selection" selectedIndex="-1">
                         @foreach (var metaDataService in Model.discChangerService.GetAvailableMetaDataServices())
                         {
@@ -156,24 +157,27 @@
                         <label for="slots-set" class="col-form-label">For these slots:</label>
                         <input type="text" class="form-control" id="slots-set" disabled>
                     </div>
-@*</form>*@
+                </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" id="metadata-start-retrieval" class="btn btn-primary" data-dismiss="modal">Start metadata retrieval</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" id="metadata-start-retrieval" class="btn btn-primary" data-bs-dismiss="modal">Start metadata retrieval</button>
             </div>
         </div>
     </div>
 </div>
-@section scripts {
-    @if(dcs.DiscChangers.Count==0)
+@section scripts
+{
+    @if (dcs.DiscChangers.Count == 0)
     {
         <script>
             toggle_config(document.getElementById('edit'));
         </script>
     }
     <script>
-        setup_metadata_dialog($('#metaDataModal'));
-        setup_popover($('.disc'));
+        $(document).ready(function () {
+            setup_metadata_dialog($('#metaDataModal'));
+            setup_popover($('.disc'));
+        });
     </script>
 }
