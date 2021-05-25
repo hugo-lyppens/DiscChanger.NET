@@ -13,6 +13,6 @@
       "*, GD3DVD"
     ],
     "targetFramework": "net5.0",
-    "typeReuseMode": "None"
+    "typeReuseMode": "All"
   }
 }

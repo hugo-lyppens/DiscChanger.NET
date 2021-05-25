@@ -15,17 +15,7 @@
     "namespaceMappings": [
       "*, GD3"
     ],
-    "references": [
-      "MetaBrainz.Common.Json, {MetaBrainz.Common.Json, 3.0.0}",
-      "MetaBrainz.MusicBrainz, {MetaBrainz.MusicBrainz, 3.0.2}",
-      "MetaBrainz.MusicBrainz.CoverArt, {MetaBrainz.MusicBrainz.CoverArt, 3.0.0}",
-      "MetaBrainz.MusicBrainz.DiscId, {MetaBrainz.MusicBrainz.DiscId, 2.0.1}",
-      "MimeTypes, {MediaTypeMap.Core, 2.3.3}",
-      "System.Drawing.Common, {System.Drawing.Common, 4.7.0}",
-      "System.IO.Ports, {System.IO.Ports, 4.7.0}",
-      "System.Text.Json, {System.Text.Json, 4.7.1}"
-    ],
-    "targetFramework": "netcoreapp3.1",
+    "targetFramework": "net5.0",
     "typeReuseMode": "All"
   }
 }
