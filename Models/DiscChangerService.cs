@@ -94,9 +94,8 @@ namespace DiscChanger.Models
             return metaDataGD3?.CurrentLookupsRemaining == null ? OnlyMusicBrainz : MusicBrainzAndGD3;
         }
 
-        public async Task UpdateMetaData(Disc d, HashSet<string> metaDataTypes)
+        public async Task UpdateMetaData(Disc d, HashSet<string> metaDataTypes, bool changed=false)
         {
-            bool changed = false;
             DiscChanger dc = d.DiscChanger;
             System.Diagnostics.Debug.WriteLine($"About to Lookup {String.Join(',', metaDataTypes)} {dc?.Key} {d.Slot}");
             if (metaDataMusicBrainz != null && metaDataTypes.Contains(MetaDataMusicBrainz.Type))
@@ -204,7 +203,7 @@ namespace DiscChanger.Models
                     {
                         Disc d = await discDataMessages.ReceiveAsync(discDataTimeOut, cancellationToken);
                         DiscChanger dc = d.DiscChanger;
-                        await UpdateMetaData(d, (metaDataGD3?.AutoLookupEnabled(d) ?? false) ? metaDataSetWithGD3Lookup : metaDataSet);
+                        await UpdateMetaData(d, (metaDataGD3?.AutoLookupEnabled(d) ?? false) ? metaDataSetWithGD3Lookup : metaDataSet, true);
                         d.DateTimeAdded ??= DateTime.Now;
                         dc.Discs[d.Slot] = d;
                         needsSaving = true;
