@@ -33,7 +33,6 @@ using Microsoft.AspNetCore.DataProtection;
 
 namespace DiscChanger.Models
 {
-    //    public class DiscChanger : IHostedService, IDisposable
     public class DiscChangerService : BackgroundService
     {
         public List<DiscChanger> DiscChangers { get; private set; }
@@ -364,17 +363,6 @@ namespace DiscChanger.Models
         }
 
         public bool needsSaving = false;
-
-        //private void DoWork(object state)
-        //{
-        //    var count = Interlocked.Increment(ref executionCount);
-
-        //    _logger.LogInformation(
-        //        "Timed Hosted Service is working. Count: {Count}", count);
-        //    string msg = $"Timed Hosted Service is working. Count: {count}";
-        //    System.Diagnostics.Debug.WriteLine(msg);
-        //    _hubContext.Clients.All.SendAsync("ReceiveMessage", "test", msg);
-        //}
 
         public override Task StopAsync(CancellationToken stoppingToken)
         {

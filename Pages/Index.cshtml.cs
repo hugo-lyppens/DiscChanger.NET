@@ -20,6 +20,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using DiscChanger.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace DiscChanger.Pages
 {
@@ -39,75 +41,60 @@ namespace DiscChanger.Pages
 
         }
 
-        public JsonResult OnGetDiscsToScan(string changerKey)
+
+        public async Task<IActionResult> OnGetDiscsToScanAsync(string changerKey)
         {
-            string discSet;
             try
             {
-                discSet = discChangerService.Changer(changerKey).GetDiscsToScan();
+                var t = await discChangerService.Changer(changerKey).GetDiscsToScan();
+                return new JsonResult(new { discsToScan = t.Item1, emptySlots = t.Item2 });
             }
             catch (Exception e)
             {
-                discSet = "Error: " + e.Message;
+                return StatusCode(Microsoft.AspNetCore.Http.StatusCodes.Status500InternalServerError, e.Message);
             }
-            return new JsonResult(discSet);
         }
-        public JsonResult OnGetDiscsToDelete(string changerKey)
+        public async Task<IActionResult> OnGetDiscsToDeleteAsync(string changerKey)
         {
-            string discSet;
             try
             {
-                discSet = discChangerService.Changer(changerKey).GetDiscsToDelete();
+                var t = await discChangerService.Changer(changerKey).GetDiscsToDelete();
+                return new JsonResult(new { discsToDelete = t.Item1, emptySlots = t.Item2 });
             }
             catch (Exception e)
             {
-                discSet = "Error: " + e.Message;
+                return StatusCode(Microsoft.AspNetCore.Http.StatusCodes.Status500InternalServerError, e.Message);
             }
-            return new JsonResult(discSet);
         }
-        public JsonResult OnGetPopulatedSlots(string changerKey, string slotsSet)
+        private IActionResult exceptionAsError<T>(Func<T> f)
         {
-            string discSet;
             try
             {
-
-                discSet = discChangerService.Changer(changerKey).GetPopulatedSlots(slotsSet);
+                return StatusCode(Microsoft.AspNetCore.Http.StatusCodes.Status200OK, f());
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                discSet = "";
+                return StatusCode(Microsoft.AspNetCore.Http.StatusCodes.Status500InternalServerError, e.Message);
             }
-            return new JsonResult(discSet);
+        }
+        public IActionResult OnGetPopulatedSlots(string changerKey, string slotsSet)
+        {
+            return exceptionAsError(() => discChangerService.Changer(changerKey).GetPopulatedSlots(slotsSet));
+        }
+        public IActionResult OnGetAvailableSlots(string changerKey)
+        {
+            return exceptionAsError(() => discChangerService.Changer(changerKey).GetAvailableSlots());
         }
 
-        public JsonResult OnGetValidateDiscShift(string changerKey,
+        public IActionResult OnGetValidateDiscShift(string changerKey,
                         string slotsSet,
                         int offset)
         {
-            string discSet;
-            try
-            {
-                discSet = discChangerService.Changer(changerKey).GetDiscsShiftDestination(slotsSet, offset);
-            }
-            catch (Exception)
-            {
-                discSet = "";
-            }
-            return new JsonResult(discSet);
+            return exceptionAsError(() => discChangerService.Changer(changerKey).GetDiscsShiftDestination(slotsSet, offset));
         }
-        public JsonResult OnGetMetaDataToRetrieve(string changerKey, string metaDataType)
+        public IActionResult OnGetMetaDataNeeded(string changerKey, string metaDataType)
         {
-            string discSet;
-            try
-            {
-                discSet = discChangerService.Changer(changerKey).GetMetaDataToRetrieve(metaDataType);
-
-            }
-            catch (Exception e)
-            {
-                discSet = "Error: " + e.Message;
-            }
-            return new JsonResult(discSet);
+            return exceptionAsError(() => discChangerService.Changer(changerKey).GetMetaDataNeeded(metaDataType));
         }
     }
 }

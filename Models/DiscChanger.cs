@@ -158,12 +158,12 @@ namespace DiscChanger.Models
         }
 
         protected Disc newDisc;
+        internal abstract string GetAvailableSlots();
+        internal abstract Task<BitArray> GetDiscsPresent();
+        internal abstract Task<(string,string)> GetDiscsToScan();
+        internal abstract Task<(string,string)> GetDiscsToDelete();
 
-        internal abstract BitArray GetDiscsPresent();
-        internal abstract string GetDiscsToScan();
-        internal abstract string GetDiscsToDelete();
-
-        internal string GetMetaDataToRetrieve(string metaDataType)
+        internal string GetMetaDataNeeded(string metaDataType)
         {
             List<int> list = Discs.Where(kvp => kvp.Value.NeedsMetaData(metaDataType)).
                         Select(kvp => { return Int32.TryParse(kvp.Key, out int position) ? (int?)position : null; }).
@@ -374,14 +374,15 @@ namespace DiscChanger.Models
         {
             return toSetString(ParseSet(slotsSet).Where(i => Discs.ContainsKey(i.ToString())));
         }
-
         internal string GetDiscsShiftDestination(string populatedSlotsSetString, int offset)
         {
             var src = ParseSet(populatedSlotsSetString);
             var dst = src.Select(i => i + offset);
             var e = dst.Except(src);
-            bool invalid = e.Any(i => { var s = i.ToString(); return !ValidSlot(s) || Discs.ContainsKey(s); });
-            return !invalid ? toSetString(dst) : null;
+            var invalid = e.Where(i => { var s = i.ToString(); return !ValidSlot(s) || Discs.ContainsKey(s); });
+            if (invalid.Count() > 0)
+                throw new Exception("Invalid or already populated slots: " + toSetString(invalid));
+            return toSetString(dst);
         }
 
         protected abstract bool ValidSlot(string s);
@@ -562,6 +563,18 @@ namespace DiscChanger.Models
         {
             return Int32.TryParse(slotString, out int slot) && slot >= 1 && slot <= SlotCount;
         }
+        internal IEnumerable<int> GetAvailableSlotsEnumerable()
+        {
+            for (int i = 1; i<=SlotCount;i++)
+            {
+                if (!Discs.ContainsKey(i.ToString()))
+                    yield return i;
+            }
+        }
+        internal override string GetAvailableSlots()
+        {
+            return toSetString(GetAvailableSlotsEnumerable());
+        }
 
         public bool AdjustLastTrackLength { get; set; } = true;
         public bool ReverseDiscExistBytes { get; set; } = false;
@@ -609,7 +622,7 @@ namespace DiscChanger.Models
         protected virtual void retrieveNonBroadcastData() { }
         protected static TimeSpan CommandTimeOut = TimeSpan.FromSeconds(1);
         protected static TimeSpan LongCommandTimeOut = TimeSpan.FromSeconds(10);
-        internal override BitArray GetDiscsPresent()
+        internal override async Task<BitArray> GetDiscsPresent()
         {
             byte cmd;
             byte[] discExistBitReq = null;
@@ -632,7 +645,7 @@ namespace DiscChanger.Models
                     discExistBitReq[2] = count;
                     SendCommand(discExistBitReq);
                 }
-                b = responses.Receive(LongCommandTimeOut);
+                b = await responses.ReceiveAsync(LongCommandTimeOut);
                 var l = b.Length;
                 if (l > 2 && b[0] == ResponsePDC && b[1] == cmd)
                 {
@@ -659,9 +672,12 @@ namespace DiscChanger.Models
             System.Diagnostics.Debug.WriteLine("Received " + count + " packets from " + GetBytesToString(discExistBitReq));
             return new BitArray(discExistBit.ToArray());
         }
-        internal override string GetDiscsToScan()
+        internal override async Task<(string,string)> GetDiscsToScan()
         {
-            BitArray discExistBitArray = GetDiscsPresent();
+            BitArray discExistBitArray = await GetDiscsPresent();
+            discExistBitArray.Not();
+            string emptySlotSetString = toSetString(discExistBitArray);
+            discExistBitArray.Not();
             foreach (var key in this.Discs.Keys)
             {
                 if (Int32.TryParse(key, out int position))
@@ -669,13 +685,13 @@ namespace DiscChanger.Models
                     discExistBitArray.Set(position - 1, false);
                 }
             }
-            return toSetString(discExistBitArray);
+            return (toSetString(discExistBitArray),emptySlotSetString);
         }
 
 
-        internal override string GetDiscsToDelete()
+        internal override async Task<(string,string)> GetDiscsToDelete()
         {
-            BitArray discExistBitArray = GetDiscsPresent();
+            BitArray discExistBitArray = await GetDiscsPresent();
             var l = discExistBitArray.Length;
             BitArray discToDeleteBitArray = new BitArray(l);
             foreach (var key in this.Discs.Keys)
@@ -685,7 +701,8 @@ namespace DiscChanger.Models
                     discToDeleteBitArray.Set(position - 1, true);
                 }
             }
-            return toSetString(discToDeleteBitArray);
+            discExistBitArray.Not();
+            return (toSetString(discToDeleteBitArray),toSetString(discExistBitArray));
         }
 
         public override async Task<bool> LoadDisc(int disc)

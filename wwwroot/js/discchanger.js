@@ -76,7 +76,7 @@ function setup_metadata_dialog(jq) {
         sel.onchange = function () {
             slotsSet.disabled = false;
             $.ajax({
-                url: '/?handler=MetaDataToRetrieve',
+                url: '/?handler=MetaDataNeeded',
                 data: {
                     changerKey: changerKey,
                     metadataType: sel.value
@@ -85,6 +85,7 @@ function setup_metadata_dialog(jq) {
                 slotsSet.value = result;
                 btn.disabled = !result;
             }).fail(function (xhr, textStatus, errorThrown) {
+                console.error(xhr.responseText);
                 alert(xhr.responseText);
             });
         };
@@ -185,6 +186,16 @@ function control(changerKey,command) {
         });
     }
 }
+function getFirstLine(str) {
+    var breakIndexR = str.indexOf("\r");
+    var breakIndexN = str.indexOf("\n");
+    var breakIndexMax = Math.max(breakIndexN, breakIndexR);
+    if (breakIndexMax===-1) 
+        return str;
+    var breakIndexMin = Math.min(breakIndexN, breakIndexR);
+    var breakIndex = breakIndexMin === -1 ? breakIndexMax : breakIndexMin;
+    return str.substr(0, breakIndex);
+}
 
 function scan(key, name) {
     $.ajax({
@@ -193,12 +204,15 @@ function scan(key, name) {
             changerKey: key
         }
     }).done(function (result) {
-        var discsToScan = prompt("which discs to scan on " + name, result);
+        var discsToScan = prompt("Which discs to scan on " + name + "?\n(Empty slots: " + result.emptySlots + ")", result.discsToScan);
         if (discsToScan) {
             connection.invoke("Scan", key, discsToScan).catch(function (err) {
                 return console.error(err.toString());
             });
         }
+    }).fail(function (xhr, textStatus, errorThrown) {
+        console.error(xhr.responseText);
+        alert(xhr.responseText);
     });
 }
 
@@ -213,7 +227,7 @@ function deleteChanger(key, name) {
 }
 
 function shiftDiscs(key, name) {
-    var slotsSet = prompt("which set of discs to shift on " + name);
+    var slotsSet = prompt("Which set of discs to shift on " + name+"?");
     if (slotsSet) {
         $.ajax({
             url: '/?handler=PopulatedSlots',
@@ -223,30 +237,45 @@ function shiftDiscs(key, name) {
             }
         }).done(function (populatedSlotsSet) {
             if (!populatedSlotsSet) {
-                alert("Cancelled"); return;
-            }
-            var offset = parseInt(prompt("integer offset to shift discs by in: " + name + ", slots: " + populatedSlotsSet),10);
-            if (!offset) {
-                alert("Cancelled"); return;
+                alert("All slots empty"); return;
             }
             $.ajax({
-                url: '/?handler=ValidateDiscShift',
+                url: '/?handler=AvailableSlots',
                 data: {
-                    changerKey: key,
-                    slotsSet: populatedSlotsSet,
-                    offset: offset
+                    changerKey: key
                 }
-            }).done(function (destinationSlotsSet) {
-                if (!destinationSlotsSet) {
-                    alert("Invalid disc shift request"); return;
+            }).done(function (availableSlotsSet) {
+                var offset = parseInt(prompt("Integer offset to shift discs by in: " + name + ", slots: " + populatedSlotsSet +"?\n(Open slots: " + availableSlotsSet + ")"), 10);
+                if (!offset) {
+                    alert("Cancelled"); return;
                 }
-                if(confirm('Please confirm shifting discs on '+name+' from '+populatedSlotsSet+' to '+destinationSlotsSet))
-                {
-                    connection.invoke("ShiftDiscs", key, populatedSlotsSet, destinationSlotsSet).catch(function (err) {
-                        return console.error(err.toString());
-                    });
-                }
+                $.ajax({
+                    url: '/?handler=ValidateDiscShift',
+                    data: {
+                        changerKey: key,
+                        slotsSet: populatedSlotsSet,
+                        offset: offset
+                    }
+                }).done(function (shiftedSlotsSet) {
+                    if (!shiftedSlotsSet) {
+                        alert("Invalid disc shift request"); return;
+                    }
+                    if (confirm('Please confirm shifting discs on ' + name + ' from ' + populatedSlotsSet + ' to ' + shiftedSlotsSet)) {
+                        connection.invoke("ShiftDiscs", key, populatedSlotsSet, shiftedSlotsSet).catch(function (err) {
+                            return console.error(err.toString());
+                        });
+                    }
+                }).fail(function (xhr, textStatus, errorThrown) {
+                    console.error(xhr.responseText);
+                    alert(getFirstLine(xhr.responseText));
+                });
+            }).fail(function (xhr, textStatus, errorThrown) {
+                console.error(xhr.responseText);
+                alert(getFirstLine(xhr.responseText));
             });
+        }).fail(function (xhr, textStatus, errorThrown) {
+            console.error(xhr.responseText);
+            alert(getFirstLine(xhr.responseText));
         });
     }
 }
@@ -264,12 +293,15 @@ function deleteDiscs(key, name) {
             changerKey: key
         }
     }).done(function (result) {
-        var discsToDelete = prompt("which discs to delete on " + name, result);
+        var discsToDelete = prompt("Which discs to delete on " + name + "?\n(Empty slots: " + result.emptySlots + ")", result.discsToDelete);
         if (discsToDelete) {
             connection.invoke("DeleteDiscs", key, discsToDelete).catch(function (err) {
                 return console.error(err.toString());
             });
         }
+    }).fail(function (xhr, textStatus, errorThrown) {
+        console.error(xhr.responseText);
+        alert(getFirstLine(xhr.responseText));
     });
 }
 
