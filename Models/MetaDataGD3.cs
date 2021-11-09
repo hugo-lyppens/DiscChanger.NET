@@ -80,7 +80,7 @@ namespace DiscChanger.Models
         public abstract class Match
         {
             public int? SelectedMatch { get; set; }
-            public virtual IEnumerable<MetaDataProvider.Track> GetTracks() { return tracks; }
+            public virtual IEnumerable<MetaDataProvider.Track> GetTracks() { return SelectedMatch!=null?tracks:null; }
             protected IEnumerable<MetaDataProvider.Track> tracks=null;
             public abstract string GetArtFileURL();
             public abstract string GetTitle();
@@ -134,22 +134,26 @@ namespace DiscChanger.Models
             public override bool HasMetaData() => metaData != null;
             public override string GetArtFileURL()
             {
+                if (SelectedMatch == null)
+                    return null;
                 var fn = metaData?.ImageFileName;
                 return fn != null ? metaDataGD3.GD3CDRelPath + '/' + HttpUtility.UrlEncode(fn) : null;
             }
             public override IEnumerable<MetaDataProvider.Track> GetTracks()
             {
+                if (SelectedMatch == null)
+                    return null;
                 if (tracks == null&&metaData!=null)
                     tracks = metaData.GetTracks();
                 return tracks;
             }
             public override string GetTitle()
             {
-                return metaData?.AlbumMeta?.Album ?? Matches?.ElementAtOrDefault(SelectedMatch??0)?.Album;
+                return SelectedMatch != null ? (metaData?.AlbumMeta?.Album ?? Matches?.ElementAtOrDefault(SelectedMatch??0)?.Album):null;
             }
             public override string GetArtist()
             {
-                return metaData?.AlbumMeta?.Artist ?? Matches?.ElementAtOrDefault(SelectedMatch ?? 0)?.Artist;
+                return SelectedMatch != null ? (metaData?.AlbumMeta?.Artist ?? Matches?.ElementAtOrDefault(SelectedMatch ?? 0)?.Artist):null;
             }
 
 
@@ -221,12 +225,14 @@ namespace DiscChanger.Models
             public abstract string RelPath();
             public override string GetArtFileURL()
             {
+                if (SelectedMatch == null)
+                    return null;
                 var fn = metaData?.ImageFileName;
                 if (fn == null && SelectedMatch.HasValue && FrontCoverImages != null)
                     fn = FrontCoverImages[SelectedMatch.Value];
                 return fn != null ? RelPath() + '/' + HttpUtility.UrlEncode(fn) : null;
             }
-            public override string GetPlot() { return metaData?.DVDMeta?.Plot; }
+            public override string GetPlot() { return SelectedMatch != null ? (metaData?.DVDMeta?.Plot):null; }
 
             static string GetTitlePlusDisc(GD3DVD.DVDMeta dvdMeta)
             {
@@ -249,12 +255,12 @@ namespace DiscChanger.Models
             }
             public override string GetTitle()
             {
-                return GetTitlePlusDisc(metaData?.DVDMeta)??Matches?.ElementAtOrDefault(SelectedMatch ?? 0)?.DVDTitle;
+                return SelectedMatch!=null?(GetTitlePlusDisc(metaData?.DVDMeta)??Matches?.ElementAtOrDefault(SelectedMatch??0)?.DVDTitle):null;
             }
 
             public override string GetArtist()
             {
-                return metaData?.DVDMeta?.Studios?.ElementAtOrDefault(0)?.StudioName;
+                return SelectedMatch != null ? (metaData?.DVDMeta?.Studios?.ElementAtOrDefault(0)?.StudioName):null;
             }
 
             public override bool AssociateMetaData()

@@ -227,25 +227,25 @@ function deleteChanger(key, name) {
 }
 
 function shiftDiscs(key, name) {
-    var slotsSet = prompt("Which set of discs to shift on " + name+"?");
-    if (slotsSet) {
-        $.ajax({
-            url: '/?handler=PopulatedSlots',
-            data: {
-                changerKey: key,
-                slotsSet: slotsSet
-            }
-        }).done(function (populatedSlotsSet) {
-            if (!populatedSlotsSet) {
-                alert("All slots empty"); return;
-            }
+    $.ajax({
+        url: '/?handler=AvailableSlots',
+        data: {
+            changerKey: key
+        }
+    }).done(function (availableSlotsSet) {
+        var slotsSet = prompt("Which set of discs to shift on " + name + "?\n(Available slots: " + availableSlotsSet + ")");
+        if (slotsSet) {
             $.ajax({
-                url: '/?handler=AvailableSlots',
+                url: '/?handler=PopulatedSlots',
                 data: {
-                    changerKey: key
+                    changerKey: key,
+                    slotsSet: slotsSet
                 }
-            }).done(function (availableSlotsSet) {
-                var offset = parseInt(prompt("Integer offset to shift discs by in: " + name + ", slots: " + populatedSlotsSet +"?\n(Open slots: " + availableSlotsSet + ")"), 10);
+            }).done(function (populatedSlotsSet) {
+                if (!populatedSlotsSet) {
+                    alert("All slots empty"); return;
+                }
+                var offset = parseInt(prompt("Integer offset to shift discs by in: " + name + ", slots: " + populatedSlotsSet + "?\n(Available slots: " + availableSlotsSet + ")"), 10);
                 if (!offset) {
                     alert("Cancelled"); return;
                 }
@@ -273,11 +273,11 @@ function shiftDiscs(key, name) {
                 console.error(xhr.responseText);
                 alert(getFirstLine(xhr.responseText));
             });
-        }).fail(function (xhr, textStatus, errorThrown) {
-            console.error(xhr.responseText);
-            alert(getFirstLine(xhr.responseText));
-        });
-    }
+        }
+    }).fail(function (xhr, textStatus, errorThrown) {
+        console.error(xhr.responseText);
+        alert(getFirstLine(xhr.responseText));
+    });
 }
 
 function moveChanger(key, offset) {
