@@ -15,7 +15,7 @@
     "namespaceMappings": [
       "*, GD3"
     ],
-    "targetFramework": "net5.0",
+    "targetFramework": "net6.0",
     "typeReuseMode": "All"
   }
 }

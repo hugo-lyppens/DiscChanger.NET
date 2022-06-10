@@ -80,7 +80,7 @@ namespace DiscChanger.Models
                 using (var f = File.Create(discChangersJsonFileName))
                 {
                     var w = new Utf8JsonWriter(f, new JsonWriterOptions { Indented = true });
-                    JsonSerializer.Serialize(w, DiscChangers, new JsonSerializerOptions { IgnoreNullValues = true });
+                    JsonSerializer.Serialize(w, DiscChangers, new JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
                     f.Close();
                     needsSaving = false;
                 }
