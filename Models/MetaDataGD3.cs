@@ -16,18 +16,15 @@
     along with DiscChanger.NET.  If not, see <https://www.gnu.org/licenses/>.
 */
 using Microsoft.AspNetCore.DataProtection;
-using MimeTypes;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
+using SixLabors.ImageSharp;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -95,32 +92,17 @@ namespace DiscChanger.Models
             public void SetMetaDataGD3(MetaDataGD3 metaDataGD3) => this.metaDataGD3 = metaDataGD3;
         }
 
-        public static string GetExtensionFromImageFormat(ImageFormat img)
-        {
-            if (img.Equals(ImageFormat.Jpeg)) return "jpg";
-            else if (img.Equals(ImageFormat.Png)) return "png";
-            else if (img.Equals(ImageFormat.Gif)) return "gif";
-            else if (img.Equals(ImageFormat.Bmp)) return "bmp";
-            else if (img.Equals(ImageFormat.Tiff)) return "tif";
-            else if (img.Equals(ImageFormat.Icon)) return "ico";
-            else if (img.Equals(ImageFormat.Emf)) return "emf";
-            else if (img.Equals(ImageFormat.Wmf)) return "wmf";
-            else if (img.Equals(ImageFormat.Exif)) return "exif";
-            else if (img.Equals(ImageFormat.MemoryBmp)) return "bmp";
-            return "unknown";
-        }
         public static async Task<string> WriteImage(byte[] image, string path, string fileNameBase)
         {
-            using (var i = Image.FromStream(new System.IO.MemoryStream(image, false)))
+
+            Image.Identify(image, out SixLabors.ImageSharp.Formats.IImageFormat format);
+            var ext = format?.FileExtensions?.FirstOrDefault();
+            var albumImageFileName = Path.ChangeExtension(fileNameBase, ext);
+            using (var f = File.Create(Path.Combine(path, albumImageFileName)))
             {
-                var ext = GetExtensionFromImageFormat(i.RawFormat);
-                var albumImageFileName = Path.ChangeExtension(fileNameBase, ext);
-                using (var f = File.Create(Path.Combine(path, albumImageFileName)))
-                {
-                    await f.WriteAsync(image);
-                }
-                return albumImageFileName;
+                await f.WriteAsync(image);
             }
+            return albumImageFileName;
         }
         public class MatchCD : Match
         {

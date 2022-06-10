@@ -162,7 +162,7 @@ namespace DiscChanger.Models
                         var queryTOC = cumulative.Take(frameCount + 3);
                         var discTOC = MB.DiscId.TableOfContents.SimulateDisc(1, (byte)frameCount, queryTOC.Skip(2).ToArray());
                         queryTOCArray = queryTOC.ToArray();
-                        query = new MB.Query("DiscChangerApp");
+                        query = new MB.Query("DiscChanger.NET", "1.5.0");
                         result = await query.LookupDiscIdAsync(discTOC.DiscId, queryTOCArray, inc, true, true);
                         disc = result.Disc;
                         if (disc != null)
