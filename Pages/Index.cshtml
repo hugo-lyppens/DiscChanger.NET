@@ -2,8 +2,8 @@
 @model IndexModel
 @inject DiscChangerService dcs
 @{
-    ViewData["Title"] = "DiscChanger.NET";
-    ViewData["Description"] = $"Disc Changers via ASP.NET Core";
+    ViewData["Title"] = "DiscChanger.NET " + DiscChangerService.Version?.ToString()??"--";
+    ViewData["Description"] = "Disc Changer Management using ASP.NET Core";
 }
 <script src="~/lib/microsoft-signalr/signalr.min.js"></script>
 <script src="~/js/discchanger.js"></script>

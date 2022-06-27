@@ -127,7 +127,7 @@ namespace DiscChanger.Models
             return null;
         }
         
-        internal async Task<Data> RetrieveMetaData(Disc d)
+        internal async Task<Data> RetrieveMetaDataAsync(Disc d)
         {
             var inc = MB.Include.Artists | MB.Include.Labels | MB.Include.Recordings | MB.Include.ReleaseGroups | MB.Include.UrlRelationships;
             MB.Query query = null;
@@ -162,13 +162,13 @@ namespace DiscChanger.Models
                         var queryTOC = cumulative.Take(frameCount + 3);
                         var discTOC = MB.DiscId.TableOfContents.SimulateDisc(1, (byte)frameCount, queryTOC.Skip(2).ToArray());
                         queryTOCArray = queryTOC.ToArray();
-                        query = new MB.Query("DiscChanger.NET", "1.5.0");
+                        query = new MB.Query("DiscChanger.NET", DiscChangerService.Version, "mailto:info@DiscChanger.NET");
                         result = await query.LookupDiscIdAsync(discTOC.DiscId, queryTOCArray, inc, true, true);
                         disc = result.Disc;
                         if (disc != null)
                             break;
                     }
-                    coverArt = new MB.CoverArt.CoverArt("DiscChanger.NET", "0.1", "info@DiscChanger.NET");
+                    coverArt = new MB.CoverArt.CoverArt("DiscChanger.NET", DiscChangerService.Version, "mailto:info@DiscChanger.NET");
                     IReadOnlyList<MB.Interfaces.Entities.IRelease> releases = disc != null ? disc.Releases : result.Releases;
                     if (releases == null||releases.Count==0)
                         return null;
@@ -258,6 +258,8 @@ namespace DiscChanger.Models
             {
                 if (query != null)
                     query.Dispose();
+                if(coverArt != null)
+                    coverArt.Dispose();
             }
         }
     }

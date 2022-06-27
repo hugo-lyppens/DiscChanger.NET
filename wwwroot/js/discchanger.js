@@ -318,7 +318,7 @@ function discDirect(key) {
     if (isNaN(titleAlbumNumber)) { titleAlbumNumber = null; }
     var chapterTrackNumber = parseInt(document.getElementById("chapter_track_number_" + key).value);
     if (isNaN(chapterTrackNumber)) { chapterTrackNumber = null; }
-    connection.invoke("DiscDirect", key, slot, titleAlbumNumber, chapterTrackNumber).catch(function (err) {
+    connection.invoke("DiscDirectAsync", key, slot, titleAlbumNumber, chapterTrackNumber).catch(function (err) {
         return console.error(err.toString());
     });
 }

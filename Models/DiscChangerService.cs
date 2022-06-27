@@ -35,6 +35,7 @@ namespace DiscChanger.Models
 {
     public class DiscChangerService : BackgroundService
     {
+        public static readonly System.Version Version = typeof(DiscChangerService).Assembly.GetName().Version;
         public List<DiscChanger> DiscChangers { get; private set; }
         private MetaDataMusicBrainz metaDataMusicBrainz;
         private MetaDataGD3 metaDataGD3;
@@ -101,7 +102,7 @@ namespace DiscChanger.Models
             {
                 try
                 {
-                    MetaDataMusicBrainz.Data mbd = await metaDataMusicBrainz.RetrieveMetaData(d);
+                    MetaDataMusicBrainz.Data mbd = await metaDataMusicBrainz.RetrieveMetaDataAsync(d);
                     if (mbd != null && d.DataMusicBrainz != mbd)
                     {
                         d.DataMusicBrainz = mbd; changed = true;
@@ -170,7 +171,7 @@ namespace DiscChanger.Models
                 }
                 try
                 {
-                    connectTasks.Add(discChanger.Connect(this, _hubContext, _logger));
+                    connectTasks.Add(discChanger.ConnectAsync(this, _hubContext, _logger));
                 }
                 catch (Exception e)
                 {
@@ -221,7 +222,7 @@ namespace DiscChanger.Models
                             {
                                 discChanger.ClearStatus();
                                 if (discChanger.Connected())
-                                    discChanger.InitiateStatusUpdate();
+                                    await discChanger.InitiateStatusUpdateAsync();
                             }
                         }
                         if (countDown <= 0)
@@ -284,7 +285,7 @@ namespace DiscChanger.Models
                 dc.HardwareFlowControl = HardwareFlowControl;
                 dc.NetworkHost = networkHost;
                 dc.NetworkPort = networkPort;
-                await dc.Connect(null, null, _logger);
+                await dc.ConnectAsync(null, null, _logger);
                 return await dc.Test();
             }
             catch (Exception e)
@@ -295,7 +296,7 @@ namespace DiscChanger.Models
             {
                 dc.Disconnect();
                 if (b)
-                    await d.Connect();
+                    await d.ConnectAsync();
             }
         }
         internal void Add(string name, string type, string connection, string commandMode, string portName, bool? HardwareFlowControl, string networkHost, int? networkPort)
@@ -352,7 +353,7 @@ namespace DiscChanger.Models
                     discChanger.HardwareFlowControl = HardwareFlowControl;
                     discChanger.NetworkHost = networkHost;
                     discChanger.NetworkPort = networkPort;
-                    discChanger.Connect(this, this._hubContext, _logger);
+                    discChanger.ConnectAsync(this, this._hubContext, _logger);
                 }
             }
         }

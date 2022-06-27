@@ -120,6 +120,14 @@ namespace DiscChanger.Models
                 return networkSocket.Receive(buffer, offset, size, SocketFlags.None);
             throw new Exception("ReadBytes neither serial port nor network connection");
         }
+        protected async Task<int> ReadBytesAsync(byte[] buffer, int offset, int size)
+        {
+            if (serialPort != null)
+                return serialPort.Read(buffer, offset, size);
+            if (networkSocket != null)
+                return await networkSocket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, size), SocketFlags.None);
+            throw new Exception("ReadBytes neither serial port nor network connection");
+        }
         protected void WriteBytes(byte[] buffer, int offset, int size)
         {
             if (serialPort != null)
@@ -127,6 +135,20 @@ namespace DiscChanger.Models
             else if (networkSocket != null)
             {
                 int sent = networkSocket.Send(buffer, offset, size, SocketFlags.None);
+                if (sent != size)
+                    throw new Exception($"Socket.Send returned {sent} instead of {size}");
+            }
+            else
+                throw new Exception("WriteBytes neither serial port nor network connection");
+        }
+        protected async Task WriteBytesAsync(byte[] buffer, int offset, int size)
+        {
+            if (serialPort != null)
+                serialPort.Write(buffer, offset, size);
+            else if (networkSocket != null)
+            {
+                var a= new ArraySegment<byte>(buffer, offset, size);
+                int sent = await networkSocket.SendAsync(a, SocketFlags.None);
                 if (sent != size)
                     throw new Exception($"Socket.Send returned {sent} instead of {size}");
             }
@@ -274,7 +296,7 @@ namespace DiscChanger.Models
             OpCancellationTokenSource.Cancel();
         }
         public OpStatus GetOpStatus() { return currentOpStatus; }
-        public async Task RetrieveMetaData(string metaDataType, string slotSet)
+        public async Task RetrieveMetaDataAsync(string metaDataType, string slotSet)
         {
             try
             {
@@ -457,7 +479,7 @@ namespace DiscChanger.Models
             }
             return sb.ToString();
         }
-        public abstract Task<string> Control(string command);
+        public abstract Task<string> ControlAsync(string command);
 
         public virtual bool SupportsCommand(string command)
         {
@@ -518,9 +540,10 @@ namespace DiscChanger.Models
 
 
 
-        public abstract Task Connect();
-        public abstract Task Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger);
+        public abstract Task ConnectAsync();
+        public abstract Task ConnectAsync(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger);
         public virtual void InitiateStatusUpdate() { }
+        public virtual async Task InitiateStatusUpdateAsync() { throw new NotImplementedException(); }
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
@@ -620,7 +643,8 @@ namespace DiscChanger.Models
             0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff
         };
         protected virtual void retrieveNonBroadcastData() { }
-        protected static TimeSpan CommandTimeOut = TimeSpan.FromSeconds(1);
+        protected static int CommandRetries = 5;
+        protected static TimeSpan CommandTimeOut = TimeSpan.FromSeconds(2);
         protected static TimeSpan LongCommandTimeOut = TimeSpan.FromSeconds(10);
         internal override async Task<BitArray> GetDiscsPresent()
         {
@@ -634,7 +658,7 @@ namespace DiscChanger.Models
             else
             {
                 cmd = (byte)Command.DISC_EXIST_BIT;
-                SendCommand(new byte[] { PDC, cmd });
+                await SendCommandAsync(new byte[] { PDC, cmd });
             }
             List<byte> discExistBit = new List<byte>(SlotBytes);
             byte[] b; byte count = 0;
@@ -643,7 +667,7 @@ namespace DiscChanger.Models
                 if (discExistBitReq != null)
                 {
                     discExistBitReq[2] = count;
-                    SendCommand(discExistBitReq);
+                    await SendCommandAsync(discExistBitReq);
                 }
                 b = await responses.ReceiveAsync(LongCommandTimeOut);
                 var l = b.Length;
@@ -714,7 +738,7 @@ namespace DiscChanger.Models
         {
             StringBuilder sb = new StringBuilder();
 
-            sb.AppendLine("Power OK: " + await Control("power_on"));
+            sb.AppendLine("Power OK: " + await ControlAsync("power_on"));
             byte[] b = await ProcessPacketCommandAsync(new byte[] { PDC, (byte)Command.MODEL_NAME });
             var i = Array.IndexOf(b, (byte)0, 2);
             var count = i != -1 ? i - 2 : b.Length - 2;
@@ -782,6 +806,20 @@ namespace DiscChanger.Models
                 WriteBytes(combined, 0, combined.Length);
             }
         }
+        internal async Task SendCommandAsync(byte[] command, bool discardInBuffer = true)
+        {
+            if (discardInBuffer)
+            {
+                DiscardInBuffer();
+
+                responses.TryReceiveAll(out IList<byte[]> _);
+            }
+            int l = command.Length;
+            byte[] header = new byte[2] { 2, (byte)l };
+            byte[] trailer = new byte[1] { (byte)((-l - CheckSum(command)) & 0xFF) };
+            byte[] combined = header.Concat(command).Concat(trailer).ToArray();
+            await WriteBytesAsync(combined, 0, combined.Length);
+        }
 
         internal byte[] ReadPacketData()
         {
@@ -839,7 +877,7 @@ namespace DiscChanger.Models
 
         private async Task<byte[]> ProcessPacketCommandAsync(byte[] command)
         {
-            SendCommand(command);
+            await SendCommandAsync(command);
             byte[] b; int count = 0;
             do
             {
@@ -850,8 +888,8 @@ namespace DiscChanger.Models
                 catch (TimeoutException) { b = null; }
                 count++;
             }
-            while (count < 10 && (b == null || b.Length < 2 || b[0] != this.ResponsePDC || b[1] != command[1]));
-            if (count == 10)
+            while (count < CommandRetries && (b == null || b.Length < 2 || b[0] != this.ResponsePDC || b[1] != command[1]));
+            if (count == CommandRetries)
             {
                 string err = "Did not get response to packet command: " + GetBytesToString(command);
                 System.Diagnostics.Debug.WriteLine(err);
@@ -862,10 +900,10 @@ namespace DiscChanger.Models
 
         private async Task<bool> ProcessAckCommandAsync(byte[] command)
         {
-            SendCommand(command);
             byte[] b; int count = 0;
             do
             {
+                await SendCommandAsync(command);
                 try
                 {
                     b = await responses.ReceiveAsync(CommandTimeOut);
@@ -873,8 +911,8 @@ namespace DiscChanger.Models
                 catch (TimeoutException) { b = null; }
                 count++;
             }
-            while (count < 10 && (b == null || b.Length != 1));
-            if (count == 10)
+            while (count < CommandRetries && (b == null || b.Length != 1));
+            if (count == CommandRetries)
             {
                 string err = "Did not get response to ack command: " + GetBytesToString(command);
                 System.Diagnostics.Debug.WriteLine(err);
@@ -891,7 +929,7 @@ namespace DiscChanger.Models
                 throw new Exception(err);
             }
         }
-        private async Task<bool> ProcessAckCommand(byte command)
+        private async Task<bool> ProcessAckCommandAsync(byte command)
         {
             return await ProcessAckCommandAsync(new byte[] { PDC, command });
         }
@@ -1300,26 +1338,40 @@ namespace DiscChanger.Models
         }
 
 
-        public override async Task Connect()
+        public override async Task ConnectAsync()
         {
             try
             {
                 ClearStatus();
                 OpenConnection();
-                await ProcessAckCommandAsync(new byte[] { PDC, (byte)Command.BROADCAST_MODE_SET, 0x02 });
-                InitiateStatusUpdate();
+                bool b=false;
+                for (int i = 0; i < CommandRetries; i++)
+                {
+                    b = await ProcessAckCommandAsync(new byte[] { PDC, (byte)Command.BROADCAST_MODE_SET, 0x02 });
+                    if (b)
+                        break;
+                    await Task.Delay(CommandTimeOut);
+                }
+                if(!b)
+                    throw new Exception("BROADCAST_MODE_SET not acknowledged");
+
+                await InitiateStatusUpdateAsync();
             }
             catch (Exception e)
             {
-                System.Diagnostics.Debug.WriteLine("Exception in Connect(): " + e.Message);
+                System.Diagnostics.Debug.WriteLine($"Exception in DiscChangerSony.ConnectAsync() {this.Key}: {e.Message}");
             }
         }
         public override void InitiateStatusUpdate()
         {
             SendCommand(new byte[] { PDC, (byte)Command.STATUS_DATA }, false);
         }
+        public override async Task InitiateStatusUpdateAsync()
+        {
+            await SendCommandAsync(new byte[] { PDC, (byte)Command.STATUS_DATA }, false);
+        }
         static protected TimeSpan PowerTimeSpan = TimeSpan.FromMilliseconds(200);
-        public override async Task<string> Control(string command)
+        public override async Task<string> ControlAsync(string command)
         {
             if (command.StartsWith("power"))
             {
@@ -1335,7 +1387,7 @@ namespace DiscChanger.Models
 
                 for (i = 0; !success && i < iterations; i++)
                 {
-                    SendCommand(powerCommand, i == 0);
+                    await SendCommandAsync(powerCommand, i == 0);
                     sw.Start();
                     try
                     {
@@ -1380,7 +1432,7 @@ namespace DiscChanger.Models
             else
             {
                 byte commandCode = commandString2Code[command];
-                bool b = await ProcessAckCommand(commandCode);
+                bool b = await ProcessAckCommandAsync(commandCode);
                 return b ? "ACK" : "NACK";
             }
         }
@@ -1435,14 +1487,14 @@ namespace DiscChanger.Models
         {
             return command != "open";
         }
-        public override async Task Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger)
+        public override async Task ConnectAsync(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger)
         {
             this.logger = logger;
             this.hubContext = hubContext;
             this.discChangerService = discChangerService;
             PDC = (byte)0xD0;
             ResponsePDC = (byte)0xD8;
-            await Connect();
+            await base.ConnectAsync();
         }
 
         internal override Type GetDiscType()
@@ -1575,14 +1627,14 @@ namespace DiscChanger.Models
         {
             return true;
         }
-        public override async Task Connect(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger)
+        public override async Task ConnectAsync(DiscChangerService discChangerService, IHubContext<DiscChangerHub> hubContext, ILogger<DiscChangerService> logger)
         {
             this.logger = logger;
             this.hubContext = hubContext;
             this.discChangerService = discChangerService;
             PDC = CommandMode2PDC[CommandMode];
             ResponsePDC = CommandMode2ResponsePDC[CommandMode];
-            await Connect();
+            await ConnectAsync();
         }
 
         internal override Type GetDiscType()

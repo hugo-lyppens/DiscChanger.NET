@@ -39,14 +39,14 @@ namespace DiscChanger.Hubs
         {
             try
             {
-                _ = discChangerService.Changer(changerKey).Control(command);
+                _ = discChangerService.Changer(changerKey).ControlAsync(command);
             }
             catch (Exception e)
             {
                 System.Diagnostics.Debug.WriteLine("Exception from control " + changerKey + '/' + command + ": " + e);
             }
         }
-        public async Task DiscDirect(string changerKey, int? discNumber, int? titleAlbumNumber, int? chapterTrackNumber)
+        public async Task DiscDirectAsync(string changerKey, int? discNumber, int? titleAlbumNumber, int? chapterTrackNumber)
         {
             try
             {
@@ -76,7 +76,7 @@ namespace DiscChanger.Hubs
         {
             try
             {
-                _ = discChangerService.Changer(changerKey).RetrieveMetaData(metaDataType, discSet);
+                _ = discChangerService.Changer(changerKey).RetrieveMetaDataAsync(metaDataType, discSet);
             }
             catch (Exception e)
             {
