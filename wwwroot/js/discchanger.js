@@ -50,8 +50,7 @@ function setup_popover(jq) {
             return $(this).find(".data").html();
         },
         title: function () {
-            return $(this).find(".artist").text() + '/' + $(this).find(".title").text() +
-                '<button onclick="$(this).closest(\'div.popover\').popover(\'hide\');" class="btn-close"/>';
+            return $(this).find(".artist").text() + '/' + $(this).find(".title").text() + '<button class="btn-close"/>';
         },
         html: true,
         sanitize: false

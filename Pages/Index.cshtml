@@ -179,5 +179,8 @@
             setup_metadata_dialog($('#metaDataModal'));
             setup_popover($('.disc'));
         });
+        $(document).on("click", ".popover .btn-close", function () {
+            $(this).parents(".popover").popover('hide');
+        });
     </script>
 }
