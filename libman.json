@@ -4,46 +4,7 @@
   "libraries": [
     {
       "provider": "cdnjs",
-      "library": "jquery@3.6.0",
-      "destination": "wwwroot/lib/jquery/",
-      "files": [
-        "jquery.js",
-        "jquery.min.js",
-        "jquery.min.map",
-        "jquery.slim.js",
-        "jquery.slim.min.js",
-        "jquery.slim.min.map"
-      ]
-    },
-    {
-      "library": "bootstrap@5.1.3",
-      "destination": "wwwroot/lib/bootstrap/",
-      "files": [
-        "dist/css/bootstrap-grid.css",
-        "dist/css/bootstrap-grid.css.map",
-        "dist/css/bootstrap-grid.min.css",
-        "dist/css/bootstrap-grid.min.css.map",
-        "dist/css/bootstrap-reboot.css",
-        "dist/css/bootstrap-reboot.css.map",
-        "dist/css/bootstrap-reboot.min.css",
-        "dist/css/bootstrap-reboot.min.css.map",
-        "dist/css/bootstrap.css",
-        "dist/css/bootstrap.css.map",
-        "dist/css/bootstrap.min.css",
-        "dist/css/bootstrap.min.css.map",
-        "dist/js/bootstrap.bundle.js",
-        "dist/js/bootstrap.bundle.js.map",
-        "dist/js/bootstrap.bundle.min.js",
-        "dist/js/bootstrap.bundle.min.js.map",
-        "dist/js/bootstrap.js",
-        "dist/js/bootstrap.js.map",
-        "dist/js/bootstrap.min.js",
-        "dist/js/bootstrap.min.js.map"
-      ]
-    },
-    {
-      "provider": "cdnjs",
-      "library": "font-awesome@6.1.1",
+      "library": "font-awesome@6.2.0",
       "destination": "wwwroot/lib/font-awesome/",
       "files": [
         "css/all.min.css",
@@ -63,10 +24,36 @@
     },
     {
       "provider": "cdnjs",
-      "library": "microsoft-signalr@6.0.5",
+      "library": "microsoft-signalr@6.0.9",
       "destination": "wwwroot/lib/microsoft-signalr/",
       "files": [
         "signalr.min.js"
+      ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "bootstrap@5.2.1",
+      "destination": "wwwroot/lib/bootstrap/",
+      "files": [
+        "dist/css/bootstrap-grid.min.css",
+        "dist/css/bootstrap-grid.min.css.map",
+        "dist/css/bootstrap-reboot.min.css",
+        "dist/css/bootstrap-reboot.min.css.map",
+        "dist/css/bootstrap.min.css",
+        "dist/css/bootstrap.min.css.map",
+        "dist/js/bootstrap.bundle.min.js",
+        "dist/js/bootstrap.bundle.min.js.map",
+        "dist/js/bootstrap.min.js",
+        "dist/js/bootstrap.min.js.map"
+      ]
+    },
+    {
+      "provider": "cdnjs",
+      "library": "jquery@3.6.1",
+      "destination": "wwwroot/lib/jquery/",
+      "files": [
+        "jquery.min.js",
+        "jquery.min.map"
       ]
     }
   ]
