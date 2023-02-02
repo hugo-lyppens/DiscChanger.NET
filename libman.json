@@ -4,7 +4,7 @@
   "libraries": [
     {
       "provider": "cdnjs",
-      "library": "font-awesome@6.2.0",
+      "library": "font-awesome@6.2.1",
       "destination": "wwwroot/lib/font-awesome/",
       "files": [
         "css/all.min.css",
@@ -24,7 +24,7 @@
     },
     {
       "provider": "cdnjs",
-      "library": "microsoft-signalr@6.0.9",
+      "library": "microsoft-signalr@7.0.2",
       "destination": "wwwroot/lib/microsoft-signalr/",
       "files": [
         "signalr.min.js"
@@ -42,7 +42,7 @@
     },
     {
       "provider": "cdnjs",
-      "library": "jquery@3.6.1",
+      "library": "jquery@3.6.3",
       "destination": "wwwroot/lib/jquery/",
       "files": [
         "jquery.min.js",

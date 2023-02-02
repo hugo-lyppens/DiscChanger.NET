@@ -873,7 +873,10 @@ namespace DiscChanger.Models
                 responses.Post(b);
             }
         }
-
+        internal bool isTimeOutError(System.IO.IOException e)
+        {
+            return (e.HResult & 0xFFFF) == 1460;
+        }
 
         private async Task<byte[]> ProcessPacketCommandAsync(byte[] command)
         {
@@ -886,6 +889,12 @@ namespace DiscChanger.Models
                     b = await responses.ReceiveAsync(CommandTimeOut);
                 }
                 catch (TimeoutException) { b = null; }
+                catch (System.IO.IOException e)
+                {
+                    if(!isTimeOutError(e))
+                        throw;
+                    b = null;
+                }
                 count++;
             }
             while (count < CommandRetries && (b == null || b.Length < 2 || b[0] != this.ResponsePDC || b[1] != command[1]));
@@ -909,6 +918,12 @@ namespace DiscChanger.Models
                     b = await responses.ReceiveAsync(CommandTimeOut);
                 }
                 catch (TimeoutException) { b = null; }
+                catch (System.IO.IOException e)
+                {
+                    if (!isTimeOutError(e))
+                        throw;
+                    b = null;
+                }
                 count++;
             }
             while (count < CommandRetries && (b == null || b.Length != 1));
@@ -1090,6 +1105,12 @@ namespace DiscChanger.Models
                         }
                         catch (TimeoutException)
                         {
+                            System.Diagnostics.Debug.WriteLine("No serial port packets forthcoming for new disc slot: " + newDisc.Slot);
+                        }
+                        catch (System.IO.IOException e)
+                        {
+                            if (!isTimeOutError(e))
+                                throw;
                             System.Diagnostics.Debug.WriteLine("No serial port packets forthcoming for new disc slot: " + newDisc.Slot);
                         }
                         catch (SocketException e)
@@ -1404,6 +1425,11 @@ namespace DiscChanger.Models
                     }
                     catch (InvalidOperationException) { }
                     catch (TimeoutException) { }
+                    catch (System.IO.IOException e)
+                    {
+                        if (!isTimeOutError(e))
+                            throw;
+                    }
                     sw.Stop();
                     System.Diagnostics.Debug.WriteLine(command + " attempt: " + i + ", ms:" + sw.ElapsedMilliseconds);
                 }
