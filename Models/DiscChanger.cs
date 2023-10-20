@@ -43,6 +43,7 @@ using System.Text.Json.Serialization;
 using System.Net.Sockets;
 using System.Net;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace DiscChanger.Models
 {
@@ -1532,6 +1533,11 @@ namespace DiscChanger.Models
         {
             return new DiscSonyDVD(slot);
         }
+        internal static readonly Regex regexCDText = new Regex("""["\.\:\,\-\;\(\)\[\]]""");
+        internal static String cdText(string s)
+        {
+            return regexCDText.Replace(s.ToLower(), String.Empty).Trim();
+        }
 
         internal override bool processPacket(byte[] b)
         {
@@ -1603,8 +1609,9 @@ namespace DiscChanger.Models
                                 existingDiscDVD.TableOfContents.TitleFrames.ContainsKey("CD") &&
                                 dd.TrackCount() >= existingDiscDVD.TableOfContents.TitleFrames["CD"].Length &&
                                 (String.IsNullOrEmpty(existingDiscDVD.DiscText.TextString) ||
+                                 String.IsNullOrEmpty(newDiscDVD.DiscText.TextString) ||
                                  String.Compare(existingDiscDVD.DiscText.TextString, newDiscDVD.DiscText.TextString, CultureInfo.CurrentCulture, CompareOptions.IgnoreCase | CompareOptions.IgnoreSymbols | CompareOptions.IgnoreNonSpace) == 0||
-                                 Similarity.StringSimilarity.Calculate(existingDiscDVD.DiscText.TextString, newDiscDVD.DiscText.TextString)>.75m))
+                                 Similarity.StringSimilarity.Calculate(cdText(existingDiscDVD.DiscText.TextString), cdText(newDiscDVD.DiscText.TextString))>.60m))
                             {
                                 newDiscDVD.DateTimeAdded = existingDiscDVD.DateTimeAdded; //preserve datetime from existing
                                 var toc = existingDiscDVD.TableOfContents;

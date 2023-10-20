@@ -134,7 +134,48 @@ namespace DiscChanger.Models
         {
             var afp = DataGD3Match?.GetArtFileURL() ?? DataMusicBrainz?.GetArtFileURL();
             var slotHtml = HtmlEncode(Slot ?? "--");
-            StringBuilder sb = new StringBuilder(@"<div class=""disc"" data-changer=""", 8192);
+            var a = HtmlEncode(GetArtist() ?? String.Empty);
+            var t = HtmlEncode(getTitle()  ?? String.Empty);
+
+            StringBuilder sb = new StringBuilder(@"<div class=""disc"" data-bs-toggle=""popover"" data-bs-html=""true""   data-bs-title=""", 8192);
+            sb.Append(HtmlAttributeEncode(a+"/"+t+@"<button class=""btn-close"">"));
+            sb.Append(@""" data-bs-content=""");
+            StringBuilder content = new StringBuilder(8192);
+            var plot = DataGD3Match?.GetPlot();
+            if (!String.IsNullOrEmpty(plot))
+                content.Append(HtmlEncode(plot));
+            var tracks = GetTracks();
+            if (tracks != null)
+            {
+                content.Append(@"<table class=""tracks"">");
+                foreach (var track in tracks)
+                {
+                    content.Append(@"<tr onclick = ""dt('");
+                    content.Append(DiscChanger.Key); content.Append("',");
+                    content.Append(slotHtml); content.Append(',');
+                    content.Append(track.Position);
+                    content.Append(@")""><td>");
+                    content.Append(track.Position);
+                    content.Append(@"</td><td>"); content.Append(HtmlEncode(track.Title ?? "---")); content.Append("</td><td>");
+                    content.Append(track.Length?.ToString(@"h\:mm\:ss") ?? "--");
+                    content.Append(@"</td></tr>");
+                }
+                content.Append(@"</table>");
+            }
+            if (DataMusicBrainz != null)
+            {
+                content.Append(@"<div class=""urls"">");
+                var urls = DataMusicBrainz?.URLs;
+                if (urls != null)
+                    foreach (var url in urls)
+                    {
+                        content.Append(@"<a href = """); content.Append(url); content.Append(@""" target = ""_blank""></a>");
+                    }
+                content.Append(@"<a class=""diag"" href = """); content.Append(DataMusicBrainz.diagURL()); content.Append(@""" target = ""_blank""></a>");
+                content.Append(@"</div>");
+            }
+            sb.Append(HtmlAttributeEncode(content.ToString()));
+            sb.Append(@""" data-changer=""");
             sb.Append(DiscChanger.Key); sb.Append(@""" data-slot= """); sb.Append(slotHtml); sb.Append(@"""><div class=""disc-header""><span class=""slot"">");
             sb.Append(HtmlEncode(DiscChanger.Name)); sb.Append(':'); sb.Append(slotHtml);
             sb.Append(@"</span><span class=""disc-type"">");
@@ -146,49 +187,9 @@ namespace DiscChanger.Models
                 sb.Append("<img src = \""); sb.Append(afp); sb.Append(@"""/>");
             }
             sb.Append(@"<div class=""artist"">");
-            string a = GetArtist();
-            if (a != null)
-                sb.Append(HtmlEncode(a));
+            sb.Append(a);
             sb.Append(@"</div><div class=""title"">");
-            string t = getTitle();
-            if (t != null)
-                sb.Append(HtmlEncode(t));
-            sb.Append(@"</div>");
-            sb.Append(@"<div class=""data"" style=""display:none"">");
-            var plot = DataGD3Match?.GetPlot();
-            if (!String.IsNullOrEmpty(plot))
-                sb.Append(HtmlEncode(plot));
-            var tracks = GetTracks();
-            if (tracks != null)
-            {
-                sb.Append(@"<table class=""tracks"">");
-                foreach (var track in tracks)
-                {
-                    sb.Append(@"<tr onclick = ""dt('");
-                    sb.Append(DiscChanger.Key); sb.Append("',");
-                    sb.Append(slotHtml); sb.Append(',');
-                    sb.Append(track.Position);
-                    sb.Append(@")""><td>");
-                    sb.Append(track.Position);
-                    sb.Append(@"</td><td>"); sb.Append(HtmlEncode(track.Title ?? "---")); sb.Append("</td><td>");
-                    sb.Append(track.Length?.ToString(@"h\:mm\:ss") ?? "--");
-                    sb.Append(@"</td></tr>");
-                }
-                sb.Append(@"</table>");
-            } 
-            if (DataMusicBrainz != null)
-            {
-                sb.Append(@"<div class=""urls"">");
-                var urls = DataMusicBrainz?.URLs;
-                if (urls != null)
-                    foreach (var url in urls)
-                    {
-                        sb.Append(@"<a href = """); sb.Append(url); sb.Append(@""" target = ""_blank""></a>");
-                    }
-                sb.Append(@"<a class=""diag"" href = """); sb.Append(DataMusicBrainz.diagURL()); sb.Append(@""" target = ""_blank""></a>");
-                sb.Append(@"</div>");
-            }
-
+            sb.Append(t);
             sb.Append(@"</div>");
             sb.Append(@"</div>");
             return sb.ToString();

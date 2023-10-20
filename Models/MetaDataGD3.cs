@@ -94,8 +94,8 @@ namespace DiscChanger.Models
 
         public static async Task<string> WriteImage(byte[] image, string path, string fileNameBase)
         {
-
-            Image.Identify(image, out SixLabors.ImageSharp.Formats.IImageFormat format);
+            var imageInfo = Image.Identify(image);
+            var format = imageInfo.Metadata.DecodedImageFormat;
             var ext = format?.FileExtensions?.FirstOrDefault();
             var albumImageFileName = Path.ChangeExtension(fileNameBase, ext);
             using (var f = File.Create(Path.Combine(path, albumImageFileName)))
@@ -634,7 +634,7 @@ namespace DiscChanger.Models
                     MatchDVDBase match = null;
                     GD3DVD.DVDMatch[] matches = null;
                     IDictionary nameToMatch = null;
-                    string path = null; ;
+                    string path = null;
                     if (ds.IsDVD())
                     {
                         string gtoc = (ds as DiscSonyBD)?.DiscIDData?.GraceNoteDiscID;

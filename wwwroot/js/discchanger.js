@@ -44,18 +44,6 @@ function updateControls(changer, slot, titleAlbumNumber, chapterTrackNumber, sta
     document.getElementById("chapter_track_number" + suffix).value = (isOff || chapterTrackNumber==0) ? null : chapterTrackNumber;
 }
 
-function setup_popover(jq) {
-    jq.popover({
-        content: function () {
-            return $(this).find(".data").html();
-        },
-        title: function () {
-            return $(this).find(".artist").text() + '/' + $(this).find(".title").text() + '<button class="btn-close"/>';
-        },
-        html: true,
-        sanitize: false
-    });
-}
 function setup_metadata_dialog(jq) {
     jq.on('show.bs.modal', function (event) {
         var button = $(event.relatedTarget); // Button that triggered the modal
@@ -133,7 +121,7 @@ function updateDisc(newChanger, newSlot, discHtml) {
     }
     element.insertAdjacentHTML(position, discHtml);
     var insertedElement = (position === 'beforeend') ? element.lastElementChild : element.previousElementSibling;
-    setup_popover($(insertedElement));
+    new bootstrap.Popover(insertedElement, { sanitize: false });
     insertedElement.scrollIntoView(false);
 }
 

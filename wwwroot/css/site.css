@@ -30,6 +30,12 @@ legend.config {
     font-size: 16px; /* Set a font size */
     cursor: pointer; /* Mouse pointer on hover */
 }
+
+.btn:disabled {
+    color: white; /* White text */
+    background-color: steelblue; /* #64A0c8Blue background */
+}
+
 .btn-settings {
     width: 100%;
 }
@@ -37,7 +43,7 @@ button.config
 {
     background-color: indianred;
 }
-/* Darker background on mouse-over */
+/* Lighter background on mouse-over */
 .btn:hover:enabled {
     background-color: lightsteelblue;
     color: black;
