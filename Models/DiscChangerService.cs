@@ -66,6 +66,8 @@ namespace DiscChanger.Models
             discChangersJsonFileName = Path.Combine(webRootPath, "DiscChangers.json");
             discsRelPath = "Discs";
             discsPath = Path.Combine(webRootPath, discsRelPath);
+            metaDataGD3 = new MetaDataGD3(_provider, contentRootPath, Path.Combine(discsPath, "GD3"), discsRelPath + "/GD3");
+            metaDataMusicBrainz = new MetaDataMusicBrainz(Path.Combine(discsPath, "MusicBrainz"), discsRelPath + "/MusicBrainz");
         }
         private void Load()
         {
@@ -155,8 +157,6 @@ namespace DiscChanger.Models
             _logger.LogInformation("Hosted Service running.");
             System.Diagnostics.Debug.WriteLine("Hosted Service running.");
             Load();
-            metaDataMusicBrainz = new MetaDataMusicBrainz(Path.Combine(discsPath, "MusicBrainz"), discsRelPath + "/MusicBrainz");
-            metaDataGD3 = new MetaDataGD3(_provider, contentRootPath, Path.Combine(discsPath, "GD3"), discsRelPath + "/GD3");
 
             key2DiscChanger = new Dictionary<string, DiscChanger>(DiscChangers.Count);
             List<Task> connectTasks = new List<Task>(DiscChangers.Count);
