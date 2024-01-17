@@ -2,7 +2,7 @@
 ASP.NET Core Solution to manage discs in disc changers
 <img src="doc/DiscChanger.NET.png" />
 
-Uses ASP.NET Core in .NET 7. Manages any number of disc changers. At the moment two types supported: DVP-CX777ES (RS-232 serial connection) and BDP-CX7000ES (TCP/IP or RS-232). Does disc data lookups via MusicBrainz (CD) and GD3 (<a href="https://www.getdigitaldata.com/GD3.aspx">GetDigitalData</a>, CD, DVD & Blu-Ray). Since ASP.NET Core is cross-platform, this works on Windows as well as Linux. 
+Uses ASP.NET Core in .NET 8. Manages any number of disc changers. At the moment two types supported: DVP-CX777ES (RS-232 serial connection) and BDP-CX7000ES (TCP/IP or RS-232). Does disc data lookups via MusicBrainz (CD) and GD3 (<a href="https://www.getdigitaldata.com/GD3.aspx">GetDigitalData</a>, CD, DVD & Blu-Ray). Since ASP.NET Core is cross-platform, this works on Windows as well as Linux. 
 
 I've tested it on a Raspberry Pi 4, which can control as many changers as it has serial ports. It has 5 real UARTs (#0, #2-#5) and a mini UART. Using the real UARTs (be sure to use proper 3.3V-RS232 adapters with or without hardware flow control CTS/RTS), one Raspberry Pi 4 could control 5 changers! <a href="https://www.raspberrypi.org/documentation/configuration/uart.md">Information on Raspberry Pi UARTs (serial ports)</a>.
 
@@ -29,6 +29,8 @@ Note that since version 1.4, DiscChanger.NET on Raspberry pi and other non-Windo
 Version 1.5: upgrade to .NET 6
 
 Version 1.6: upgrade to .NET 7. The serial port library of .NET 7 has a newly introduced bug causing it to throw IO exceptions instead of TimeOut exceptions as documented. Code contains workaround to treat IO exceptions caused by timeouts as timeouts.
+
+Version 1.7: upgrade to .NET 8.
 
 Future enhancements planned:
 - Support for Firewire changers such as XL1B.

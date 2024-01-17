@@ -553,7 +553,7 @@ namespace DiscChanger.Models
             }
             else if (d.IsBD() && d is DiscSonyBD dbd)
             {
-                var AACSDiscID = dbd.DiscIDData.AACSDiscID;
+                var AACSDiscID = dbd.DiscIDData?.AACSDiscID;
                 if (AACSDiscID != null && AACSDiscID.Length > 0 && AACSDiscID2NameBD.TryGetValue(AACSDiscID, out string name))
                     r = nameToMatchBD[name];
             }
