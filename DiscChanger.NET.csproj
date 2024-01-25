@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <UserSecretsId>3fbbcc3f-f0b2-4c5b-a9fa-d9f92803b4dd</UserSecretsId>
-    <Version>1.7.0</Version>
+    <Version>1.7.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -37,15 +37,15 @@
 
   <ItemGroup>
     <PackageReference Include="MediaTypeMap.Core" Version="2.3.3" />
-    <PackageReference Include="MetaBrainz.MusicBrainz" Version="5.0.1" />
-    <PackageReference Include="MetaBrainz.MusicBrainz.CoverArt" Version="5.1.0" />
-    <PackageReference Include="MetaBrainz.MusicBrainz.DiscId" Version="3.0.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.0.2" />
+    <PackageReference Include="MetaBrainz.MusicBrainz" Version="6.1.0" />
+    <PackageReference Include="MetaBrainz.MusicBrainz.CoverArt" Version="6.0.0" />
+    <PackageReference Include="MetaBrainz.MusicBrainz.DiscId" Version="4.0.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.2" />
     <PackageReference Include="StringSimilarity" Version="1.0.2.1" />
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
     <PackageReference Include="System.ServiceModel.Duplex" Version="6.0.0" />
-    <PackageReference Include="System.ServiceModel.Http" Version="6.2.0" />
-    <PackageReference Include="System.ServiceModel.NetTcp" Version="6.2.0" />
+    <PackageReference Include="System.ServiceModel.Http" Version="8.0.0" />
+    <PackageReference Include="System.ServiceModel.NetTcp" Version="8.0.0" />
     <PackageReference Include="System.ServiceModel.Security" Version="6.0.0" />
   </ItemGroup>
 
