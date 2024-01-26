@@ -157,12 +157,14 @@ connection.start().then(function () {
 });
 
 function scroll_into_view(changerKey) {
+    var query = '[data-changer="' + changerKey + '"]';
     var slot = document.getElementById("disc_number_" + changerKey).value;
     if (slot) {
-        var discElement = document.querySelector('[data-changer="'+changerKey+'"][data-slot="'+slot+'"]');
-        if (discElement) {
-            discElement.scrollIntoView(false);
-        }
+        query += '[data-slot="' + slot + '"]';
+    }
+    var discElement = document.querySelector(query);
+    if (discElement) {
+        discElement.scrollIntoView(false);
     }
 }
 
