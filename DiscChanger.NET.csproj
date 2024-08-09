@@ -40,7 +40,7 @@
     <PackageReference Include="MetaBrainz.MusicBrainz" Version="6.1.0" />
     <PackageReference Include="MetaBrainz.MusicBrainz.CoverArt" Version="6.0.0" />
     <PackageReference Include="MetaBrainz.MusicBrainz.DiscId" Version="4.0.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
     <PackageReference Include="StringSimilarity" Version="1.0.2.1" />
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
     <PackageReference Include="System.ServiceModel.Duplex" Version="6.0.0" />
