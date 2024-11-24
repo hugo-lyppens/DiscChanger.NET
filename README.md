@@ -2,11 +2,11 @@
 ASP.NET Core Solution to manage discs in disc changers
 <img src="doc/DiscChanger.NET.png" />
 
-Uses ASP.NET Core in .NET 8. Manages any number of disc changers. At the moment two types supported: DVP-CX777ES (RS-232 serial connection) and BDP-CX7000ES (TCP/IP or RS-232). Does disc data lookups via MusicBrainz (CD) and GD3 (<a href="https://www.getdigitaldata.com/GD3.aspx">GetDigitalData</a>, CD, DVD & Blu-Ray). Since ASP.NET Core is cross-platform, this works on Windows as well as Linux. 
+Uses ASP.NET Core in .NET 9. Manages any number of disc changers. At the moment two types supported: DVP-CX777ES (RS-232 serial connection) and BDP-CX7000ES (TCP/IP or RS-232). Does disc data lookups via MusicBrainz (CD) and GD3 (<a href="https://www.getdigitaldata.com/GD3.aspx">GetDigitalData</a>, CD, DVD & Blu-Ray). Since ASP.NET Core is cross-platform, this works on Windows as well as Linux. 
 
 I've tested it on a Raspberry Pi 4, which can control as many changers as it has serial ports. It has 5 real UARTs (#0, #2-#5) and a mini UART. Using the real UARTs (be sure to use proper 3.3V-RS232 adapters with or without hardware flow control CTS/RTS), one Raspberry Pi 4 could control 5 changers! <a href="https://www.raspberrypi.org/documentation/configuration/uart.md">Information on Raspberry Pi UARTs (serial ports)</a>.
 
-And on Windows, it runs in IIS with the .NET 8 runtime (hosting bundle) installed, or from the command line using the dotnet command. MacOS is also supported by .NET 8.0. In IIS, I have had good results by setting 'Preload Enabled' to true in the DiscChanger.NET site Advanced Settings as well as 'Start Mode' to 'AlwaysRunning' in the DiscChanger.NET application pool's Advanced Settings.
+And on Windows, it runs in IIS with the .NET 9 runtime (hosting bundle) installed, or from the command line using the dotnet command. MacOS is also supported by .NET 9.0. In IIS, I have had good results by setting 'Preload Enabled' to true in the DiscChanger.NET site Advanced Settings as well as 'Start Mode' to 'AlwaysRunning' in the DiscChanger.NET application pool's Advanced Settings.
 
 You can scan all or a subset of the discs in the changer to populate the display. Also, when the changer loads a disc, it checks to see whether it is a known disc. If not, DiscChanger.NET will look it up and show it on the grid without reloading the page. By clicking on a music CD, you get a <a href="doc/DiscChanger.NET Popover audio tracks and links.png">popover</a> showing listing of tracks as well as web links known to the metadata providers pertaining to the disc.
 
@@ -31,6 +31,8 @@ Version 1.5: upgrade to .NET 6
 Version 1.6: upgrade to .NET 7. The serial port library of .NET 7 has a newly introduced bug causing it to throw IO exceptions instead of TimeOut exceptions as documented. Code contains workaround to treat IO exceptions caused by timeouts as timeouts.
 
 Version 1.7: upgrade to .NET 8.
+
+Version 1.8: upgrade to .NET 9 (not yet using any of its new features).
 
 Future enhancements planned:
 - Support for Firewire changers such as XL1B.
