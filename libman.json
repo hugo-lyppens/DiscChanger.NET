@@ -32,7 +32,7 @@
     },
     {
       "provider": "unpkg",
-      "library": "bootstrap@5.3.5",
+      "library": "bootstrap@5.3.7",
       "destination": "wwwroot/lib/bootstrap/",
       "files": [
         "dist/css/bootstrap.min.css",
