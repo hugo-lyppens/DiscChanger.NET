@@ -22,16 +22,20 @@ namespace DiscChanger
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
-            //services.AddCors(options =>
-            //{
-            //    options.AddPolicy("AllowAll",
-            //        builder =>
-            //        {
-            //            builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
-            //        });
-            //});
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll",
+                    builder =>
+                    {
+                        builder.SetIsOriginAllowed(origin => true)
+                               .AllowAnyMethod()
+                               .AllowAnyHeader()
+                               .AllowCredentials();
+                    });
+            });
             services.AddSingleton<DiscChangerService>();
             services.AddSingleton<IHostedService>(p => p.GetService<DiscChangerService>());
+            services.AddSingleton<CustomDiscService>();
             services.AddSignalR(hubOptions =>
             {
                 hubOptions.EnableDetailedErrors = true;
@@ -58,12 +62,8 @@ namespace DiscChanger
             app.UseStaticFiles();
 
             app.UseRouting();
+            app.UseCors("AllowAll");
 
-            //            app.UseAuthorization();
-            //app.UseCors("AllowAll");
-            //app.UseCors(
-            //    options => options.SetIsOriginAllowed(x => _ = true).AllowAnyMethod().AllowAnyHeader().AllowCredentials()
-            //);
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();

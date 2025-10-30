@@ -1,6 +1,7 @@
 ﻿@page
 @model IndexModel
 @inject DiscChangerService dcs
+@inject CustomDiscService customDiscService
 @{
     ViewData["Title"] = "DiscChanger.NET " + DiscChangerService.Version?.ToString()??"--";
     ViewData["Description"] = "Disc Changer Management using ASP.NET Core";
@@ -9,19 +10,78 @@
 <script src="~/js/discchanger.js"></script>
 
 @{var discDisplaySize = Request.Cookies["DiscDisplaySize"] ?? "15"; }
-<nav class="navbar navbar-expand-md sticky-top navbar-light bg-secondary">
+
+<!-- Compact Bar (shown when navbar is hidden) -->
+<div id="compact-bar" style="display: none; background: rgba(10, 10, 10, 0.95); border-bottom: 1px solid var(--apple-border); padding: 4px 8px; position: sticky; top: 0; z-index: 1050;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+        <button class="btn btn-settings" onclick="toggleNavbar()" title="Show full controls" style="padding: 3px 6px; font-size: 11px; height: 26px;">
+            <i class="fas fa-chevron-down"></i>
+        </button>
+        @{
+            // Find the CD changer by name and use its exact control inputs
+            var cdChanger = dcs.DiscChangers.FirstOrDefault(dc => dc.Name == "CD");
+            if (cdChanger == null && dcs.DiscChangers.Count > 0)
+            {
+                // Fallback to first changer if no CD changer found
+                cdChanger = dcs.DiscChangers[0];
+            }
+            
+            if (cdChanger != null)
+            {
+                var cdKey = cdChanger.Key;
+                <fieldset style="display: flex; gap: 4px; align-items: center; border: none; padding: 0; margin: 0;">
+                    <input type="number" title="Disc Number" name="disc_number_@cdKey" min="1" max="400" id="disc_number_@cdKey" onchange="clear_title_album_chapter_track('@cdKey')" style="width: 50px; height: 26px; padding: 4px 6px; font-size: 11px; border: 1px solid var(--apple-border); border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--apple-text-primary);" />
+                    <input type="number" title="Title/Album Number" name="title_album_number_@cdKey" min="1" max="499" id="title_album_number_@cdKey" style="width: 45px; height: 26px; padding: 4px 6px; font-size: 11px; border: 1px solid var(--apple-border); border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--apple-text-primary);" />
+                    <input type="number" title="Chapter/Track Number" name="chapter_track_number_@cdKey" min="1" max="999" id="chapter_track_number_@cdKey" style="width: 45px; height: 26px; padding: 4px 6px; font-size: 11px; border: 1px solid var(--apple-border); border-radius: 6px; background: rgba(255,255,255,0.08); color: var(--apple-text-primary);" />
+                    <button id="disc_direct_@cdKey" onclick="discDirect('@cdKey')" style="padding: 4px 14px; height: 26px; font-size: 11px; background: var(--apple-accent); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; line-height: 1;">Go</button>
+                    <button class="btn btn-settings" onclick="selectSmartRandom()" title="Random Disc" style="padding: 3px 6px; background: var(--apple-accent); font-size: 10px; height: 24px; margin-left: 4px; min-width: auto;">
+                        <i class="fas fa-random"></i>
+                    </button>
+                </fieldset>
+            }
+        }
+        <a href="/fullscreen.html" target="_blank" class="btn btn-settings" title="Open fullscreen view" style="padding: 3px 6px; font-size: 11px; height: 26px; text-decoration: none;">
+            <i class="fas fa-expand"></i>
+        </a>
+    </div>
+</div>
+
+<nav id="main-navbar" class="navbar navbar-expand-md sticky-top navbar-light bg-secondary">
     <a href="http://discchanger.net"><img class="navbar-brand" src="img/SonyDVP-CX777ES600.png" /></a>
-    <div class="container">
+    <div class="container" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 4px 0;">
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div class="boxed">
+        <div class="boxed" style="gap: 4px;">
             <div>
-                <button id="edit" class="btn btn-settings" onclick="toggle_config()"><i title="Toggle access to settings" class="fas fa-cogs fa-lg"></i></button>
+                <button class="btn btn-settings" onclick="toggleNavbar()" title="Hide top bar" style="padding: 4px 8px;"><i class="fas fa-chevron-up"></i></button>
             </div><div>
-                <input type="range" title="Disc Display Size (@(discDisplaySize)rem)" min="10" max="50" id="disc_display_size" onchange="change_display_size(this)" class="disc-display-size-slider" value="@discDisplaySize" />
+                <button id="edit" class="btn btn-settings" onclick="toggle_config()" style="padding: 4px 8px;"><i title="Toggle access to settings" class="fas fa-cogs"></i></button>
+            </div><div>
+                <a href="/fullscreen.html" target="_blank" class="btn btn-settings" title="Open fullscreen view" style="padding: 4px 8px;"><i class="fas fa-expand"></i></a>
+            </div><div>
+                <input type="range" title="Disc Display Size (@(discDisplaySize)rem)" min="10" max="50" id="disc_display_size" onchange="change_display_size(this)" class="disc-display-size-slider" value="@discDisplaySize" style="width: 80px; height: 20px;" />
             </div>
+        </div>
+        
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: nowrap;">
+            <div class="library-search" style="margin: 0;">
+                <i class="fas fa-search" style="font-size: 12px; left: 8px;"></i>
+                <input type="text" id="library-search" placeholder="Search..." oninput="searchLibrary()" style="width: 180px; padding: 4px 8px 4px 28px; font-size: 13px; height: 28px;" />
+            </div>
+            <button id="toggle-cds" class="btn btn-toggle" onclick="toggleCDSection()" title="Show/Hide CD Section" style="padding: 4px 10px; font-size: 12px; height: 28px;">
+                <i class="fas fa-compact-disc"></i> CDs
+            </button>
+            <button id="toggle-movies" class="btn btn-toggle" onclick="toggleMovieSection()" title="Show/Hide Movie Section" style="padding: 4px 10px; font-size: 12px; height: 28px;">
+                <i class="fas fa-film"></i> Movies
+            </button>
+            <button class="btn btn-settings" onclick="selectRandomCD()" title="Select Random CD" style="padding: 4px 10px; background: var(--apple-accent); font-size: 12px; height: 28px;">
+                <i class="fas fa-random"></i>
+            </button>
+            <button class="btn btn-settings" onclick="selectRandomMovie()" title="Select Random Movie" style="padding: 4px 10px; background: var(--apple-accent); font-size: 12px; height: 28px;">
+                <i class="fas fa-random"></i>
+            </button>
         </div>
         <div class="navbar-collapse collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-lg-0 ml-3">
@@ -69,7 +129,7 @@
                                                     <button id="cancel-scan_@key" onclick="cancelOp('@key')">Cancel Operation</button>
                                                 </div>
                                             </td>
-                                            <td class="hide-on-config">
+                                            <td class="hide-on-config" @(name == "CD" ? "style=\"display:none;\"" : "")>
                                                 <fieldset>
                                                     <input type="number" title="Disc Number" name="disc_number_@key" min="1" max="400" id="disc_number_@key" onchange="clear_title_album_chapter_track('@key')" />
                                                     <input type="number" title="Title/Album Number" name="title_album_number_@key" min="1" max="499" id="title_album_number_@key" />
@@ -79,6 +139,7 @@
                                             </td>
                                             <td hidden class="config">
                                                 <a hidden asp-page="DiscChangerConfig" asp-route-key="@key" title="Go to changer config page" class="config"><button id="edit_@key" class="btn config" type="button"><i class="fas fa-cog fa-lg"></i></button></a>
+                                                <a hidden asp-page="AddCustomDisc" asp-route-changerKey="@key" title="Add a custom disc" class="config"><button class="btn config" type="button"><i class="fas fa-plus fa-lg"></i> Add disc</button></a>
                                                 <button id="shift_discs_@key" class="btn config" type="button" title="Shift a set of discs to new position" onclick="return shiftDiscs('@key',&quot;@name&quot;)"><i class="fas fa-dolly fa-lg"></i></button>
                                                 <button id="delete_@key" class="btn config" type="button" title="Delete disc changer" onclick="return deleteChanger('@key',&quot;@name&quot;)"><i class="fas fa-trash-alt fa-lg"></i></button>
                                                 @if (dci > 0)
@@ -110,6 +171,29 @@
         </div>
     </div>
 </nav>
+<div style="padding: 32px; padding-bottom: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div>
+            <h1 id="library-title" style="font-size: 48px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; background: linear-gradient(135deg, #FFFFFF 0%, #98989D 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; cursor: pointer;" onclick="editLibraryName()" title="Click to edit library name">Your Library</h1>
+            <input id="library-title-input" type="text" style="display: none; font-size: 48px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; background: transparent; color: white; border: none; border-bottom: 2px solid var(--apple-accent); outline: none; width: 100%;" onblur="saveLibraryName()" onkeypress="if(event.key==='Enter')saveLibraryName()" />
+            @{
+                var changerStats = new System.Text.StringBuilder();
+                for (int dci = 0; dci < discChangerCount; dci++)
+                {
+                    Models.DiscChanger dc = dcs.DiscChangers[dci];
+                    var key = dc.Key;
+                    var customDiscs = customDiscService.GetCustomDiscsForChanger(key);
+                    var scannedCount = dc.Discs?.Count ?? 0;
+                    var customCount = customDiscs.Count();
+                    var totalCount = new HashSet<string>(dc.Discs?.Keys ?? new string[0]).Union(customDiscs.Select(cd => cd.Slot)).Count();
+                    changerStats.Append($"{dc.Name}: {totalCount} disc{(totalCount != 1 ? "s" : "")}");
+                    if (dci < discChangerCount - 1) changerStats.Append(" • ");
+                }
+            }
+            <p style="font-size: 17px; color: var(--apple-text-secondary); font-weight: 500; letter-spacing: -0.01em;">@Html.Raw(changerStats.ToString())</p>
+        </div>
+    </div>
+</div>
 <div class="discs" id="discs-table" style="grid-template-columns:repeat(auto-fill,minmax(@(discDisplaySize)rem,1fr))">
     @{
         for (int dci = 0; dci < discChangerCount; dci++)
@@ -119,18 +203,42 @@
             var changerName = dc.Name;
             Models.DiscChanger.Status status = dc.CurrentStatus();
                     <script>updateControls('@key', @(status?.discNumber?.ToString()??"null"), @(status?.titleAlbumNumber?.ToString() ?? "null"), @(status?.chapterTrackNumber?.ToString() ?? "null"), '@(status?.statusString??"off")', '@(status?.modeDisc)');</script>
+            
+            // Get custom discs for this changer
+            var customDiscs = customDiscService.GetCustomDiscsForChanger(key).ToDictionary(cd => cd.Slot);
+            
+            // Merge all slots (scanned and custom) and sort them
+            var allSlots = new HashSet<string>();
             var discs = dc.Discs;
             if (discs != null)
             {
                 lock (discs)
                 {
-                    var l = discs.ToList();
-                    l.Sort(Models.Disc.SlotDiscPairComparer);
-                    foreach (var kvp in l)
+                    foreach (var slot in discs.Keys)
                     {
-                        var d = kvp.Value;
-                                @Html.Raw(d.ToHtml());
+                        allSlots.Add(slot);
                     }
+                }
+            }
+            foreach (var slot in customDiscs.Keys)
+            {
+                allSlots.Add(slot);
+            }
+            
+            // Sort all slots numerically
+            var sortedSlots = allSlots.OrderBy(slot => int.TryParse(slot, out int s) ? s : 0).ToList();
+            
+            // Render discs in sorted order
+            foreach (var slot in sortedSlots)
+            {
+                // Custom disc overrides scanned disc if both exist
+                if (customDiscs.ContainsKey(slot))
+                {
+                    @Html.Raw(customDiscs[slot].ToHtml(changerName));
+                }
+                else if (discs != null && discs.ContainsKey(slot))
+                {
+                    @Html.Raw(discs[slot].ToHtml());
                 }
             }
         }

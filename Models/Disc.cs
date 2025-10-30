@@ -162,25 +162,36 @@ namespace DiscChanger.Models
                 }
                 content.Append(@"</table>");
             }
-            if (DataMusicBrainz != null)
-            {
-                content.Append(@"<div class=""urls"">");
-                var urls = DataMusicBrainz?.URLs;
-                if (urls != null)
-                    foreach (var url in urls)
-                    {
-                        content.Append(@"<a href = """); content.Append(url); content.Append(@""" target = ""_blank""></a>");
-                    }
-                content.Append(@"<a class=""diag"" href = """); content.Append(DataMusicBrainz.diagURL()); content.Append(@""" target = ""_blank""></a>");
-                content.Append(@"</div>");
-            }
+            // URLs section hidden per user request
+            // if (DataMusicBrainz != null)
+            // {
+            //     content.Append(@"<div class=""urls"">");
+            //     var urls = DataMusicBrainz?.URLs;
+            //     if (urls != null)
+            //         foreach (var url in urls)
+            //         {
+            //             content.Append(@"<a href = """); content.Append(url); content.Append(@""" target = ""_blank""></a>");
+            //         }
+            //     content.Append(@"<a class=""diag"" href = """); content.Append(DataMusicBrainz.diagURL()); content.Append(@""" target = ""_blank""></a>");
+            //     content.Append(@"</div>");
+            // }
+            
+            // Add Go and Edit buttons to content (before encoding) - use single quotes to avoid encoding issues
+            content.Append(@"<div class='disc-actions'>");
+            content.Append(@"<button class='btn btn-primary btn-sm disc-go-btn' data-changer='");
+            content.Append(DiscChanger.Key); content.Append(@"' data-slot='");
+            content.Append(slotHtml); content.Append(@"'>Go</button>");
+            content.Append(@"<a href='/AddCustomDisc?changerKey=");
+            content.Append(DiscChanger.Key); content.Append(@"&slot=");
+            content.Append(slotHtml); content.Append(@"' class='btn btn-secondary btn-sm'>Edit</a>");
+            content.Append(@"</div>");
+            
             sb.Append(HtmlAttributeEncode(content.ToString()));
             sb.Append(@""" data-changer=""");
-            sb.Append(DiscChanger.Key); sb.Append(@""" data-slot= """); sb.Append(slotHtml); sb.Append(@"""><div class=""disc-header""><span class=""slot"">");
-            sb.Append(HtmlEncode(DiscChanger.Name)); sb.Append(':'); sb.Append(slotHtml);
-            sb.Append(@"</span><span class=""disc-type"">");
-            sb.Append(HtmlEncode(GetDiscType() ?? "-"));
-            sb.Append("</span></div>");
+            sb.Append(DiscChanger.Key); sb.Append(@""" data-slot="""); sb.Append(slotHtml); 
+            sb.Append(@""" data-media-type="""); 
+            sb.Append(IsCD() ? "CD" : (IsDVD() || IsBD()) ? "MOVIE" : "OTHER"); 
+            sb.Append(@""">");
 
             if (afp != null)
             {
@@ -190,7 +201,11 @@ namespace DiscChanger.Models
             sb.Append(a);
             sb.Append(@"</div><div class=""title"">");
             sb.Append(t);
-            sb.Append(@"</div>");
+            sb.Append(@"</div><div class=""disc-header""><span class=""slot"">");
+            sb.Append(HtmlEncode(DiscChanger.Name)); sb.Append(':'); sb.Append(slotHtml);
+            sb.Append(@"</span><span class=""disc-type"">");
+            sb.Append(HtmlEncode(GetDiscType() ?? "-"));
+            sb.Append("</span></div>");
             sb.Append(@"</div>");
             return sb.ToString();
         }

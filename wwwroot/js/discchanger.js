@@ -338,3 +338,316 @@ function clear_title_album_chapter_track(changerKey) {
     document.getElementById("title_album_number_" + changerKey).value = null;
     document.getElementById("chapter_track_number_" + changerKey).value = null;
 }
+
+// Event delegation for popover Go button
+document.addEventListener('click', function(e) {
+    // Handle Go button in popover
+    if (e.target.classList.contains('disc-go-btn')) {
+        var key = e.target.getAttribute('data-changer');
+        var slot = e.target.getAttribute('data-slot'); // Keep as string for input field
+        if (key && slot) {
+            // Populate the slot number in the main control panel
+            var slotInput = document.getElementById('disc_number_' + key);
+            if (slotInput) {
+                slotInput.value = slot;
+            }
+            // Clear title/album and chapter/track fields
+            var titleAlbumInput = document.getElementById('title_album_number_' + key);
+            if (titleAlbumInput) {
+                titleAlbumInput.value = '';
+            }
+            var chapterTrackInput = document.getElementById('chapter_track_number_' + key);
+            if (chapterTrackInput) {
+                chapterTrackInput.value = '';
+            }
+
+            // Trigger the main discDirect function
+            discDirect(key);
+
+            // Close any open popovers
+            var popovers = document.querySelectorAll('[data-bs-toggle="popover"]');
+            popovers.forEach(function(popover) {
+                var popoverInstance = bootstrap.Popover.getInstance(popover);
+                if (popoverInstance) {
+                    popoverInstance.hide();
+                }
+            });
+        }
+    }
+});
+
+// Library name editing
+function editLibraryName() {
+    var title = document.getElementById('library-title');
+    var input = document.getElementById('library-title-input');
+    input.value = title.innerText;
+    title.style.display = 'none';
+    input.style.display = 'block';
+    input.focus();
+    input.select();
+}
+
+function saveLibraryName() {
+    var title = document.getElementById('library-title');
+    var input = document.getElementById('library-title-input');
+    var newName = input.value.trim() || 'Your Library';
+    title.innerText = newName;
+    title.style.display = 'block';
+    input.style.display = 'none';
+    // Save to cookie
+    document.cookie = 'LibraryName=' + encodeURIComponent(newName) + ';max-age=2000000000';
+}
+
+// Load library name from cookie on page load
+document.addEventListener('DOMContentLoaded', function() {
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        if (cookie.startsWith('LibraryName=')) {
+            var name = decodeURIComponent(cookie.substring(12));
+            document.getElementById('library-title').innerText = name;
+            break;
+        }
+    }
+});
+
+// Toggle CD/Movie sections with cookie persistence
+var hideCDs = false;
+var hideMovies = false;
+
+// Load toggle states from cookies on page load
+function loadToggleStates() {
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        if (cookie.startsWith('HideCDs=')) {
+            hideCDs = cookie.substring(8) === 'true';
+        }
+        if (cookie.startsWith('HideMovies=')) {
+            hideMovies = cookie.substring(11) === 'true';
+        }
+    }
+    updateToggleButtons();
+    applyFilters();
+}
+
+function toggleCDSection() {
+    hideCDs = !hideCDs;
+    document.cookie = 'HideCDs=' + hideCDs + ';max-age=2000000000';
+    updateToggleButtons();
+    applyFilters();
+}
+
+function toggleMovieSection() {
+    hideMovies = !hideMovies;
+    document.cookie = 'HideMovies=' + hideMovies + ';max-age=2000000000';
+    updateToggleButtons();
+    applyFilters();
+}
+
+function updateToggleButtons() {
+    var cdBtn = document.getElementById('toggle-cds');
+    var movieBtn = document.getElementById('toggle-movies');
+    
+    if (cdBtn) {
+        if (hideCDs) {
+            cdBtn.classList.remove('active');
+            cdBtn.classList.add('inactive');
+        } else {
+            cdBtn.classList.add('active');
+            cdBtn.classList.remove('inactive');
+        }
+    }
+    
+    if (movieBtn) {
+        if (hideMovies) {
+            movieBtn.classList.remove('active');
+            movieBtn.classList.add('inactive');
+        } else {
+            movieBtn.classList.add('active');
+            movieBtn.classList.remove('inactive');
+        }
+    }
+}
+
+function applyFilters() {
+    var discs = document.querySelectorAll('.disc');
+    discs.forEach(function(disc) {
+        var mediaType = disc.getAttribute('data-media-type');
+        var shouldHide = (hideCDs && mediaType === 'CD') || (hideMovies && mediaType === 'MOVIE');
+        disc.style.display = shouldHide ? 'none' : 'flex';
+    });
+}
+
+// Call loadToggleStates when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadToggleStates();
+});
+
+// Random disc selection - just highlight, don't load
+function selectRandomCD() {
+    var cdDiscs = document.querySelectorAll('.disc[data-media-type="CD"]');
+    if (cdDiscs.length === 0) {
+        alert('No CDs found!');
+        return;
+    }
+    
+    // Remove previous highlight
+    document.querySelectorAll('.disc').forEach(function(d) {
+        d.classList.remove('disc-selected');
+    });
+    
+    var randomDisc = cdDiscs[Math.floor(Math.random() * cdDiscs.length)];
+    randomDisc.classList.add('disc-selected');
+    
+    // Scroll to the disc
+    randomDisc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function selectRandomMovie() {
+    var movieDiscs = document.querySelectorAll('.disc[data-media-type="MOVIE"]');
+    if (movieDiscs.length === 0) {
+        alert('No movies found!');
+        return;
+    }
+    
+    // Remove previous highlight
+    document.querySelectorAll('.disc').forEach(function(d) {
+        d.classList.remove('disc-selected');
+    });
+    
+    var randomDisc = movieDiscs[Math.floor(Math.random() * movieDiscs.length)];
+    randomDisc.classList.add('disc-selected');
+    
+    // Scroll to the disc
+    randomDisc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Smart random - selects based on what's currently visible
+function selectSmartRandom() {
+    // Check which sections are visible
+    var cdVisible = !hideCDs;
+    var movieVisible = !hideMovies;
+    
+    // If both are visible or hidden, pick from all
+    if ((cdVisible && movieVisible) || (!cdVisible && !movieVisible)) {
+        // Pick randomly between CD and Movie
+        if (Math.random() < 0.5) {
+            selectRandomCD();
+        } else {
+            selectRandomMovie();
+        }
+    } else if (cdVisible) {
+        selectRandomCD();
+    } else {
+        selectRandomMovie();
+    }
+}
+
+// Search functionality - move matching results to top
+function searchLibrary() {
+    var searchText = document.getElementById('library-search').value.toLowerCase();
+    var discsContainer = document.getElementById('discs-table');
+    var discs = Array.from(document.querySelectorAll('.disc'));
+    
+    if (searchText === '') {
+        // Reset all discs to visible and restore original order
+        discs.forEach(function(disc) {
+            disc.style.order = '';
+            disc.style.opacity = '1';
+            disc.style.pointerEvents = 'auto';
+        });
+        return;
+    }
+    
+    // Score each disc based on match
+    discs.forEach(function(disc) {
+        var artist = disc.querySelector('.artist')?.innerText.toLowerCase() || '';
+        var title = disc.querySelector('.title')?.innerText.toLowerCase() || '';
+        var slot = disc.getAttribute('data-slot') || '';
+        var changer = disc.querySelector('.disc-header .slot')?.innerText.toLowerCase() || '';
+        
+        var matches = artist.includes(searchText) || 
+                     title.includes(searchText) || 
+                     slot.includes(searchText) ||
+                     changer.includes(searchText);
+        
+        if (matches) {
+            disc.style.order = '-1';
+            disc.style.opacity = '1';
+            disc.style.pointerEvents = 'auto';
+        } else {
+            disc.style.order = '999';
+            disc.style.opacity = '0.3';
+            disc.style.pointerEvents = 'auto';
+        }
+    });
+}
+
+// Toggle navbar between full and compact mode
+function toggleNavbar() {
+    var mainNavbar = document.getElementById('main-navbar');
+    var compactBar = document.getElementById('compact-bar');
+    var isHidden = mainNavbar.style.display === 'none';
+    
+    if (isHidden) {
+        mainNavbar.style.display = 'block';
+        compactBar.style.display = 'none';
+        document.cookie = 'navbarHidden=false; path=/; max-age=31536000';
+    } else {
+        mainNavbar.style.display = 'none';
+        compactBar.style.display = 'block';
+        document.cookie = 'navbarHidden=true; path=/; max-age=31536000';
+    }
+}
+
+// Load navbar state from cookie on page load
+function loadNavbarState() {
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        if (cookie.startsWith('navbarHidden=')) {
+            var isHidden = cookie.substring('navbarHidden='.length) === 'true';
+            if (isHidden) {
+                document.getElementById('main-navbar').style.display = 'none';
+                document.getElementById('compact-bar').style.display = 'block';
+            }
+            return;
+        }
+    }
+}
+
+// Close other popovers when opening a new one and add glowing effect
+function setupPopoverBehavior() {
+    // Get all elements with popovers
+    var popoverElements = document.querySelectorAll('[data-bs-toggle="popover"]');
+    
+    popoverElements.forEach(function(element) {
+        element.addEventListener('show.bs.popover', function() {
+            // Close all other popovers and remove their glow
+            popoverElements.forEach(function(otherElement) {
+                if (otherElement !== element) {
+                    var popoverInstance = bootstrap.Popover.getInstance(otherElement);
+                    if (popoverInstance) {
+                        popoverInstance.hide();
+                    }
+                    otherElement.classList.remove('disc-selected');
+                }
+            });
+            
+            // Add glowing effect to the opened disc
+            element.classList.add('disc-selected');
+        });
+        
+        element.addEventListener('hide.bs.popover', function() {
+            // Remove glowing effect when popover closes
+            element.classList.remove('disc-selected');
+        });
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadNavbarState();
+    setupPopoverBehavior();
+});
