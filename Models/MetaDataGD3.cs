@@ -94,15 +94,34 @@ namespace DiscChanger.Models
 
         public static async Task<string> WriteImage(byte[] image, string path, string fileNameBase)
         {
-            var imageInfo = Image.Identify(image);
-            var format = imageInfo.Metadata.DecodedImageFormat;
-            var ext = format?.FileExtensions?.FirstOrDefault();
-            var albumImageFileName = Path.ChangeExtension(fileNameBase, ext);
-            using (var f = File.Create(Path.Combine(path, albumImageFileName)))
+            try
             {
-                await f.WriteAsync(image);
+                // Ensure directory exists
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                    System.Diagnostics.Debug.WriteLine($"Created directory: {path}");
+                }
+                
+                var imageInfo = Image.Identify(image);
+                var format = imageInfo.Metadata.DecodedImageFormat;
+                var ext = format?.FileExtensions?.FirstOrDefault() ?? "jpg";
+                var albumImageFileName = Path.ChangeExtension(fileNameBase, ext);
+                var fullPath = Path.Combine(path, albumImageFileName);
+                
+                using (var f = File.Create(fullPath))
+                {
+                    await f.WriteAsync(image);
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"Saved GD3 image: {fullPath}");
+                return albumImageFileName;
             }
-            return albumImageFileName;
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ERROR saving GD3 image to {path}/{fileNameBase}: {ex.Message}");
+                throw;
+            }
         }
         public class MatchCD : Match
         {

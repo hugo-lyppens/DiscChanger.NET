@@ -27,12 +27,14 @@ namespace DiscChanger.Hubs
     public class DiscChangerHub : Hub
     {
         public DiscChangerService discChangerService;
+        public CustomDiscService customDiscService;
         private readonly Microsoft.Extensions.Logging.ILogger<DiscChangerHub> _logger;
 
-        public DiscChangerHub(DiscChangerService discChangerService, ILogger<DiscChangerHub> logger)
+        public DiscChangerHub(DiscChangerService discChangerService, CustomDiscService customDiscService, ILogger<DiscChangerHub> logger)
         {
             _logger = logger;
             this.discChangerService = discChangerService;
+            this.customDiscService = customDiscService;
         }
 
         public void Control(string changerKey, string command)
@@ -98,7 +100,15 @@ namespace DiscChanger.Hubs
         {
             try
             {
+                // Delete from regular changer
                 await discChangerService.Changer(changerKey).DeleteDiscs(discSet);
+                
+                // Also delete from custom discs
+                var slots = Models.DiscChanger.ParseSet(discSet);
+                foreach (var slot in slots)
+                {
+                    await customDiscService.DeleteCustomDisc(changerKey, slot.ToString());
+                }
             }
             catch (Exception e)
             {

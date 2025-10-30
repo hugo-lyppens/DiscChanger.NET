@@ -41,7 +41,7 @@
                 @Html.DropDownListFor(m => m.Connection,
                           new SelectList(Model.ConnectionTypes), Model.OnChangeSubmit)
             }
-            @if (Model.Connection == global::DiscChanger.Models.DiscChanger.CONNECTION_SERIAL_PORT)
+            @if (!String.IsNullOrEmpty(Model.Connection) && Model.Connection == global::DiscChanger.Models.DiscChanger.CONNECTION_SERIAL_PORT)
             {
                 <label asp-for="PortName">Port</label>
                 @Html.DropDownListFor(m => m.PortName,

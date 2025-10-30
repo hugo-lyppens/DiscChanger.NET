@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Now Playing</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    background: #0a0a0a;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    min-height: 100vh;
+    animation: backgroundShift 20s ease-in-out infinite;
+  }
+
+  @keyframes backgroundShift {
+    0%, 100% { background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%); }
+  }
+  .now-playing-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 90vw;
+    max-height: 90vh;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .album-title {
+    font-size: clamp(1.2rem, 2.8vw, 2rem);
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: clamp(1.5rem, 3vh, 2rem);
+    letter-spacing: -0.005em;
+    max-width: 65vw;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+    animation: fadeInSlide 1.2s ease-out;
+  }
+
+  .album-art-container {
+    position: relative;
+    margin-bottom: clamp(2rem, 4vh, 3rem);
+  }
+
+  .album-art {
+    width: clamp(300px, 35vw, 450px);
+    height: clamp(300px, 35vw, 450px);
+    border-radius: 20px;
+    object-fit: cover;
+    box-shadow: 
+      0 25px 80px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeInScale 1.5s ease-out;
+  }
+
+  @keyframes fadeInScale {
+    0% { 
+      opacity: 0; 
+      transform: scale(0.8) translateY(20px); 
+    }
+    100% { 
+      opacity: 1; 
+      transform: scale(1) translateY(0); 
+    }
+  }
+
+  .album-art:hover {
+    transform: scale(1.02);
+    box-shadow: 
+      0 30px 90px rgba(0, 0, 0, 0.8),
+      0 0 0 1px rgba(255, 255, 255, 0.15);
+  }
+
+  .track-title {
+    font-size: clamp(1.5rem, 3.5vw, 2.8rem);
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: clamp(0.8rem, 2vh, 1.2rem);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    max-width: 70vw;
+    text-shadow: 0 2px 15px rgba(0, 0, 0, 0.4);
+    animation: fadeInSlide 1.4s ease-out 0.2s both;
+  }
+
+  .artist-name {
+    font-size: clamp(1.2rem, 2.8vw, 2rem);
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: clamp(1.5rem, 3vh, 2rem);
+    letter-spacing: -0.005em;
+    max-width: 65vw;
+    animation: fadeInSlide 1.6s ease-out 0.4s both;
+  }
+
+  .disc-track-info {
+    display: flex;
+    gap: clamp(1.5rem, 4vw, 2.5rem);
+    align-items: center;
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    animation: fadeInSlide 1.8s ease-out 0.6s both;
+  }
+
+  .disc-track-info span {
+    padding: 10px 18px;
+    min-width: 80px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 25px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    display: inline-block;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .disc-track-info span:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+  }
+
+  @keyframes fadeInSlide {
+    0% { 
+      opacity: 0; 
+      transform: translateY(30px); 
+    }
+    100% { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+
+  /* Status indicator */
+  .status-indicator {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    font-size: 0.8rem;
+    padding: 8px 16px;
+    border-radius: 20px;
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    z-index: 10;
+    transition: all 0.3s ease;
+    opacity: 0.7;
+  }
+
+  .status-indicator.connected {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    border-color: rgba(76, 175, 80, 0.3);
+  }
+
+  .status-indicator.error {
+    background: rgba(244, 67, 54, 0.2);
+    color: #F44336;
+    border-color: rgba(244, 67, 54, 0.3);
+  }
+
+  .status-indicator.normal {
+    background: rgba(255, 193, 7, 0.2);
+    color: #FFC107;
+    border-color: rgba(255, 193, 7, 0.3);
+  }
+
+  /* Media Controls */
+  .media-controls {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    padding: 15px 25px;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+  }
+
+  .media-controls:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.9);
+  }
+
+  .control-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 45px;
+    height: 45px;
+  }
+
+  .control-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+  }
+
+  .control-btn:active {
+    transform: scale(0.95);
+  }
+
+  .control-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .play-btn {
+    width: 55px;
+    height: 55px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .play-btn svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .play-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Keyboard shortcuts display */
+  .shortcuts-hint {
+    position: fixed;
+    bottom: 130px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    backdrop-filter: blur(10px);
+    z-index: 9;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+  }
+
+  .shortcuts-hint.show {
+    opacity: 1;
+  }
+
+  /* Hidden log for debugging */
+  .debug-log {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    max-height: 120px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-size: 0.7rem;
+    background: rgba(0, 0, 0, 0.8);
+    color: rgba(255, 255, 255, 0.7);
+    padding: 12px;
+    border-radius: 12px;
+    overflow-y: auto;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+  }
+
+  .debug-log.show {
+    opacity: 0.9;
+    transform: translateY(0);
+  }
+
+  /* Debug toggle */
+  .debug-toggle {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.7);
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    z-index: 11;
+  }
+
+  .debug-toggle:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  /* Smooth transitions for content updates */
+  .fade-transition {
+    transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  }
+
+  .fade-out {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  /* Responsive adjustments */
+  @media (max-height: 800px) {
+    .album-title {
+      margin-bottom: 2rem;
+    }
+    .album-art-container {
+      margin-bottom: 1.5rem;
+    }
+    .artist-name {
+      margin-bottom: 1.5rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .disc-track-info {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="now-playing-container">
+    <div class="album-title fade-transition" id="album-title">Ready to Play</div>
+    
+    <div class="album-art-container">
+      <img class="album-art fade-transition" id="album-art" src="" alt="Album Art" />
+    </div>
+    
+    <div class="track-title fade-transition" id="track-title">No music playing</div>
+    <div class="artist-name fade-transition" id="artist-name">Disc changer ready</div>
+    
+    <div class="disc-track-info fade-transition" id="disc-track-info">
+      <span>CD <span id="cd-number">--</span></span>
+      <span>Track <span id="track-number">--</span></span>
+    </div>
+  </div>
+
+  <div class="status-indicator normal" id="status-container">
+    <span id="status">Connecting...</span>
+  </div>
+
+  <!-- Media Controls -->
+  <div class="media-controls" id="media-controls">
+    <button class="control-btn" id="prev-btn" title="Previous Track (3)">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor">
+        <path d="M493.6 445c-11.2 5.3-24.5 3.6-34.1-4.4L288 297.7 288 416c0 12.4-7.2 23.7-18.4 29s-24.5 3.6-34.1-4.4L64 297.7 64 416c0 17.7-14.3 32-32 32s-32-14.3-32-32L0 96C0 78.3 14.3 64 32 64s32 14.3 32 32l0 118.3L235.5 71.4c9.5-7.9 22.8-9.7 34.1-4.4S288 83.6 288 96l0 118.3L459.5 71.4c9.5-7.9 22.8-9.7 34.1-4.4S512 83.6 512 96l0 320c0 12.4-7.2 23.7-18.4 29z"/>
+      </svg>
+    </button>
+    
+    <button class="control-btn play-btn" id="play-pause-btn" title="Play/Pause (Enter)">
+      <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor">
+        <path d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zM188.3 147.1c7.6-4.2 16.8-4.1 24.3 .5l144 88c7.1 4.4 11.5 12.1 11.5 20.5s-4.4 16.1-11.5 20.5l-144 88c-7.4 4.5-16.7 4.7-24.3 .5s-12.3-12.2-12.3-20.9l0-176c0-8.7 4.7-16.7 12.3-20.9z"/>
+      </svg>
+      <svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" style="display: none;">
+        <path d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256zm-90.7-96c0-17.7 14.3-32 32-32s32 14.3 32 32l0 192c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-192zm128 0c0-17.7 14.3-32 32-32s32 14.3 32 32l0 192c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-192z"/>
+      </svg>
+    </button>
+    
+    <button class="control-btn" id="next-btn" title="Next Track (7)">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor">
+        <path d="M18.4 445c11.2 5.3 24.5 3.6 34.1-4.4L224 297.7 224 416c0 12.4 7.2 23.7 18.4 29s24.5 3.6 34.1-4.4L448 297.7 448 416c0 17.7 14.3 32 32 32s32-14.3 32-32l0-320c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 118.3L276.5 71.4c-9.5-7.9-22.8-9.7-34.1-4.4S224 83.6 224 96l0 118.3L52.5 71.4c-9.5-7.9-22.8-9.7-34.1-4.4S0 83.6 0 96L0 416c0 12.4 7.2 23.7 18.4 29z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Keyboard shortcuts hint -->
+  <div class="shortcuts-hint" id="shortcuts-hint">
+    3: Previous • Enter: Play/Pause • 7: Next
+  </div>
+
+  <div class="debug-log" id="log"></div>
+  <button class="debug-toggle" onclick="toggleDebug()">Debug</button>
+
+<!-- Include SignalR from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+
+<script>
+let debugVisible = false;
+let connection;
+
+function toggleDebug() {
+  debugVisible = !debugVisible;
+  document.getElementById('log').classList.toggle('show', debugVisible);
+}
+
+(async function(){
+  const logEl = document.getElementById('log');
+  const statusEl = document.getElementById('status');
+  const statusContainer = document.getElementById('status-container');
+  const cdEl = document.getElementById('cd-number');
+  const trackEl = document.getElementById('track-number');
+  const artistEl = document.getElementById('artist-name');
+  const albumEl = document.getElementById('album-title');
+  const trackTitleEl = document.getElementById('track-title');
+  const albumArtEl = document.getElementById('album-art');
+
+  // Fade transition elements
+  const fadeElements = document.querySelectorAll('.fade-transition');
+
+  let currentCd = null;
+  let currentTrack = null;
+  let currentChanger = null;
+  let currentPlayerStatus = 'off';
+  let hasReceivedInitialStatus = false;
+
+  function addLog(message) {
+    const timestamp = new Date().toLocaleTimeString();
+    const currentLog = logEl.textContent;
+    logEl.textContent = `[${timestamp}] ${message}\n${currentLog}`;
+  }
+
+  function setStatus(message, type = 'normal') {
+    statusEl.textContent = message;
+    statusContainer.className = 'status-indicator ' + type;
+  }
+
+  function fadeOutContent() {
+    fadeElements.forEach(el => el.classList.add('fade-out'));
+  }
+
+  function fadeInContent() {
+    setTimeout(() => {
+      fadeElements.forEach(el => el.classList.remove('fade-out'));
+    }, 250);
+  }
+
+  // Media control functions
+  function control(changerKey, command) {
+    if (command && connection && connection.state === signalR.HubConnectionState.Connected) {
+      addLog(`Sending control command: ${command} to changer: ${changerKey}`);
+      connection.invoke("Control", changerKey, command).catch(function (err) {
+        addLog(`Control error: ${err.toString()}`);
+      });
+    } else {
+      addLog(`Cannot send control - connection state: ${connection ? connection.state : 'null'}`);
+    }
+  }
+
+  function togglePlayPause() {
+    if (!currentChanger) {
+      addLog('No active changer detected - defaulting to cd');
+      currentChanger = 'cd';
+    }
+    
+    const command = (currentPlayerStatus === 'play') ? 'pause' : 'play';
+    addLog(`Toggle play/pause - current status: ${currentPlayerStatus}, sending: ${command}`);
+    control(currentChanger, command);
+  }
+
+  function previousTrack() {
+    if (!currentChanger) {
+      addLog('No active changer detected - defaulting to cd');
+      currentChanger = 'cd';
+    }
+    control(currentChanger, 'previous');
+  }
+
+  function nextTrack() {
+    if (!currentChanger) {
+      addLog('No active changer detected - defaulting to cd');
+      currentChanger = 'cd';
+    }
+    control(currentChanger, 'next');
+  }
+
+  function updatePlayPauseButton(isPlaying) {
+    const playIcon = document.getElementById('play-icon');
+    const pauseIcon = document.getElementById('pause-icon');
+    
+    if (isPlaying) {
+      playIcon.style.display = 'none';
+      pauseIcon.style.display = 'block';
+    } else {
+      playIcon.style.display = 'block';
+      pauseIcon.style.display = 'none';
+    }
+  }
+
+  // Event listeners for control buttons
+  document.getElementById('prev-btn').addEventListener('click', previousTrack);
+  document.getElementById('play-pause-btn').addEventListener('click', togglePlayPause);
+  document.getElementById('next-btn').addEventListener('click', nextTrack);
+
+  // Show/hide shortcuts hint
+  let hintsTimer;
+  function showShortcutsHint() {
+    const hint = document.getElementById('shortcuts-hint');
+    hint.classList.add('show');
+    clearTimeout(hintsTimer);
+    hintsTimer = setTimeout(() => {
+      hint.classList.remove('show');
+    }, 3000);
+  }
+
+  // Show hints on first load
+  setTimeout(showShortcutsHint, 2000);
+
+  async function fetchDiscInfo(changer, cd, track) {
+    try {
+      setStatus('Updating...', 'normal');
+      
+      // Fade out current content
+      fadeOutContent();
+      
+      const response = await fetch('/');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const text = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(text, 'text/html');
+
+      addLog(`Looking for changer: ${changer}, disc slot: ${cd}...`);
+
+      // Find disc div for the current CD slot and changer
+      const discDiv = doc.querySelector(`.disc[data-changer="${changer}"][data-slot="${cd}"]`);
+      
+      if (!discDiv) {
+        const allDiscs = doc.querySelectorAll(`.disc[data-changer="${changer}"]`);
+        const availableSlots = Array.from(allDiscs).map(disc => {
+          const slotText = disc.querySelector('.slot')?.textContent || 'No slot';
+          const dataSlot = disc.getAttribute('data-slot') || 'No data-slot';
+          return `${slotText} (data-slot: ${dataSlot})`;
+        });
+        addLog(`Available discs for changer ${changer}: ${availableSlots.join(', ')}`);
+        throw new Error(`Disc slot ${cd} not found for changer ${changer}. Available: ${availableSlots.length} discs`);
+      }
+
+      // Extract artist, album/title, cd number
+      const artist = discDiv.querySelector('.artist')?.textContent.trim() || 'Unknown Artist';
+      const album = discDiv.querySelector('.title')?.textContent.trim() || 'Unknown Album';
+      const cdNumberText = discDiv.querySelector('.slot')?.textContent.trim() || `CD:${cd}`;
+
+      // Album art URL
+      let albumArtSrc = discDiv.querySelector('img')?.getAttribute('src') || '';
+      if (albumArtSrc && !albumArtSrc.startsWith('http') && !albumArtSrc.startsWith('/')) {
+        albumArtSrc = '/' + albumArtSrc;
+      }
+
+      // Parse track list HTML from data-bs-content attribute
+      const trackListHtml = discDiv.getAttribute('data-bs-content') || '';
+      const trackDoc = parser.parseFromString(trackListHtml, 'text/html');
+      const rows = trackDoc.querySelectorAll('table.tracks tr');
+
+      let trackTitle = 'Unknown Track';
+      rows.forEach(row => {
+        const numText = row.querySelector('td')?.textContent.trim();
+        const num = parseInt(numText, 10);
+        if (num === track) {
+          trackTitle = row.querySelectorAll('td')[1]?.textContent.trim() || 'Unknown Track';
+        }
+      });
+
+      // Update UI with fade transition
+      setTimeout(() => {
+        cdEl.textContent = cdNumberText.replace('CD:', '').trim();
+        trackEl.textContent = track;
+        artistEl.textContent = artist;
+        albumEl.textContent = album;
+        
+        // Hide track title if it's "---" (with any whitespace)
+        if (trackTitle.trim() === '---') {
+          trackTitleEl.style.display = 'none';
+        } else {
+          trackTitleEl.style.display = 'block';
+          trackTitleEl.textContent = trackTitle;
+        }
+        
+        // Handle album art loading
+        if (albumArtSrc) {
+          const img = new Image();
+          img.onload = () => {
+            albumArtEl.src = albumArtSrc;
+            albumArtEl.alt = `${album} album art`;
+          };
+          img.onerror = () => {
+            albumArtEl.src = '';
+            albumArtEl.alt = 'No album art';
+          };
+          img.src = albumArtSrc;
+        }
+        
+        fadeInContent();
+      }, 250);
+
+      setStatus('Connected', 'connected');
+      addLog(`Updated - ${artist} - ${trackTitle} from ${album} (CD:${cd} Track:${track})`);
+
+    } catch (err) {
+      setStatus('Error', 'error');
+      addLog('Error: ' + err.message);
+      fadeInContent();
+    }
+  }
+
+  // Request current status from the hub
+  async function requestCurrentStatus() {
+    if (connection && connection.state === signalR.HubConnectionState.Connected) {
+      try {
+        addLog('Requesting current status from hub...');
+        // Try to invoke a GetStatus method if your hub has one
+        // If not, the hub should automatically send StatusData when a client connects
+        await connection.invoke("GetStatus", "cd").catch(err => {
+          // If GetStatus doesn't exist, that's okay - we'll wait for StatusData events
+          addLog('GetStatus not available, waiting for StatusData broadcast...');
+        });
+      } catch (err) {
+        addLog('Error requesting status: ' + err.message);
+      }
+    }
+  }
+
+  // Set up SignalR connection
+  connection = new signalR.HubConnectionBuilder()
+    .withUrl("/discChangerHub")
+    .withAutomaticReconnect()
+    .build();
+
+  // Listen for status updates
+  connection.on("StatusData", function(changer, slot, titleAlbumNumber, chapterTrackNumber, status, modeDisc) {
+    addLog(`SignalR StatusData - Changer:${changer} Slot:${slot} Track:${chapterTrackNumber} Status:${status}`);
+    
+    // Mark that we've received at least one status update
+    hasReceivedInitialStatus = true;
+    
+    // Update current player status and button
+    currentPlayerStatus = status;
+    updatePlayPauseButton(status === 'play');
+    
+    // Only update if the disc/track has changed and the player is not off
+    if (status !== "off" && slot && chapterTrackNumber) {
+      if (changer !== currentChanger || slot !== currentCd || chapterTrackNumber !== currentTrack) {
+        currentChanger = changer;
+        currentCd = slot;
+        currentTrack = chapterTrackNumber;
+        
+        addLog(`Change detected - updating display`);
+        fetchDiscInfo(changer, slot, chapterTrackNumber);
+      }
+    } else if (status === "off") {
+      setStatus('Player Off', 'normal');
+      addLog('Player turned off');
+      
+      // Show offline state
+      fadeOutContent();
+      setTimeout(() => {
+        albumEl.textContent = 'Player Off';
+        trackTitleEl.textContent = 'No Music Playing';
+        trackTitleEl.style.display = 'block'; // Show the title when offline
+        artistEl.textContent = 'Disc Changer Offline';
+        cdEl.textContent = '--';
+        trackEl.textContent = '--';
+        albumArtEl.src = '';
+        fadeInContent();
+      }, 250);
+    }
+  });
+
+  // Listen for disc data updates
+  connection.on("DiscData", function(changer, slot, discHtml) {
+    addLog(`SignalR DiscData - Changer:${changer} Slot:${slot} updated`);
+    // If this is the currently playing disc, refresh the display
+    if (changer === currentChanger && slot === currentCd && currentTrack) {
+      addLog('Currently playing disc updated - refreshing');
+      fetchDiscInfo(currentChanger, currentCd, currentTrack);
+    }
+  });
+
+  // Start the SignalR connection
+  async function startConnection() {
+    try {
+      addLog('Starting application...');
+      setStatus('Connecting...', 'normal');
+      await connection.start();
+      addLog('SignalR connection established');
+      setStatus('Connected', 'connected');
+      
+      // Request current status after connection is established
+      // The main page should broadcast the current state when we connect
+      setTimeout(() => {
+        if (!hasReceivedInitialStatus) {
+          addLog('No initial status received, requesting...');
+          requestCurrentStatus();
+        }
+      }, 1000);
+      
+      // If still no status after 3 seconds, show ready state
+      setTimeout(() => {
+        if (!hasReceivedInitialStatus) {
+          addLog('No status received - player may be off or idle');
+          setStatus('Ready', 'normal');
+        }
+      }, 3000);
+      
+    } catch (err) {
+      addLog('SignalR connection failed: ' + err.toString());
+      setStatus('Connection Failed', 'error');
+    }
+  }
+
+  // Start the connection
+  startConnection();
+
+  // Handle reconnection
+  connection.onreconnected(() => {
+    addLog('SignalR reconnected');
+    setStatus('Connected', 'connected');
+    requestCurrentStatus();
+  });
+
+  connection.onreconnecting(() => {
+    addLog('SignalR reconnecting...');
+    setStatus('Reconnecting...', 'normal');
+  });
+
+  connection.onclose(() => {
+    addLog('SignalR connection closed');
+    setStatus('Disconnected', 'error');
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    // Ignore if user is typing in an input
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+    
+    if (e.key === 'F11') {
+      // Toggle fullscreen
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    } else if (e.key === 'd' || e.key === 'D') {
+      // Toggle debug
+      toggleDebug();
+    } else if (e.key === 'Enter') {
+      // Play/Pause
+      e.preventDefault();
+      togglePlayPause();
+      showShortcutsHint();
+    } else if (e.key === '3') {
+      // Previous track
+      e.preventDefault();
+      previousTrack();
+      showShortcutsHint();
+    } else if (e.key === '7') {
+      // Next track
+      e.preventDefault();
+      nextTrack();
+      showShortcutsHint();
+    }
+  });
+
+  // Auto-hide cursor in fullscreen after inactivity
+  let mouseTimer;
+  let isFullscreen = false;
+  
+  function resetMouseTimer() {
+    clearTimeout(mouseTimer);
+    document.body.style.cursor = 'default';
+    if (isFullscreen) {
+      mouseTimer = setTimeout(() => {
+        document.body.style.cursor = 'none';
+      }, 3000);
+    }
+  }
+
+  document.addEventListener('mousemove', resetMouseTimer);
+  document.addEventListener('fullscreenchange', () => {
+    isFullscreen = !!document.fullscreenElement;
+    if (!isFullscreen) {
+      document.body.style.cursor = 'default';
+      clearTimeout(mouseTimer);
+    } else {
+      resetMouseTimer();
+    }
+  });
+
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+@page
+@model AddCustomDiscModel
+@{
+    ViewData["Title"] = Model.IsEditMode ? "Edit Disc" : "Add Custom Disc";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form method="post" id="discForm" enctype="multipart/form-data">
+    <fieldset>
+        <legend>Disc Details</legend>
+        <input type="hidden" asp-for="ChangerKey" />
+        <input type="hidden" asp-for="OriginalSlot" />
+        
+        <div asp-validation-summary="All" class="text-danger"></div>
+        
+        <div style="margin-bottom: 15px;">
+            <label asp-for="Slot">Slot Number @(!Model.IsEditMode ? "(leave empty for auto-assign)" : "")</label>
+            <input asp-for="Slot" type="number" min="1" placeholder="@(!Model.IsEditMode ? "Auto-assign next available" : "")" style="display:block; width:100%; padding:5px;" />
+            <span asp-validation-for="Slot" class="text-danger"></span>
+            @if (Model.IsEditMode)
+            {
+                <small style="color: #666;">Change the slot number to move this disc to a different slot</small>
+            }
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label asp-for="DiscType">Disc Type</label>
+            <select asp-for="DiscType" style="display:block; width:100%; padding:5px;">
+                <option value="">Select...</option>
+                <option value="CD">CD</option>
+                <option value="DVD">DVD</option>
+                <option value="BD">Blu-ray</option>
+            </select>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label asp-for="Artist">Artist</label>
+            <input asp-for="Artist" style="display:block; width:100%; padding:5px;" />
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label asp-for="Title">Title *</label>
+            <input asp-for="Title" required style="display:block; width:100%; padding:5px;" />
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label>Cover Art</label>
+            @if (!string.IsNullOrEmpty(Model.ExistingCoverArtUrl))
+            {
+                <div style="margin-bottom: 10px;">
+                    <img src="@Model.ExistingCoverArtUrl" alt="Current cover art" style="max-width: 200px; max-height: 200px;" />
+                    <p style="font-size: 0.9em; color: #666;">Upload a new image to replace</p>
+                </div>
+            }
+            <input type="file" id="coverArt" name="CoverArt" accept="image/*" />
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <h3>Tracks</h3>
+            <div id="tracksContainer">
+                @if (Model.Tracks != null && Model.Tracks.Count > 0)
+                {
+                    for (int i = 0; i < Model.Tracks.Count; i++)
+                    {
+                        <div class="track-row" style="margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                            <input type="hidden" name="Tracks[@i].Position" value="@Model.Tracks[i].Position" />
+                            <div style="margin-bottom: 5px;">
+                                <strong>Track @Model.Tracks[i].Position</strong>
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <label>Title:</label>
+                                <input name="Tracks[@i].Title" value="@Model.Tracks[i].Title" style="width:100%; padding:5px;" />
+                            </div>
+                            <div>
+                                <label>Length (h:mm:ss):</label>
+                                <input name="Tracks[@i].Length" value="@Model.Tracks[i].Length" placeholder="0:03:25" style="width:100%; padding:5px;" />
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p style="color: #666;">No tracks yet. Save disc first, then tracks can be edited by clicking Edit button on the disc.</p>
+                }
+            </div>
+            @if (Model.Tracks != null && Model.Tracks.Count > 0)
+            {
+                <button type="button" onclick="addTrack()" class="btn btn-sm" style="margin-top: 10px;">Add Track</button>
+            }
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button type="submit" name="op" value="save" class="btn btn-primary">Save</button>
+            <button type="submit" name="op" value="cancel" class="btn btn-secondary">Cancel</button>
+        </div>
+    </fieldset>
+</form>
+
+<script>
+function addTrack() {
+    const container = document.getElementById('tracksContainer');
+    const trackCount = container.querySelectorAll('.track-row').length;
+    const newPosition = trackCount + 1;
+    
+    const trackHtml = `
+        <div class="track-row" style="margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+            <input type="hidden" name="Tracks[${trackCount}].Position" value="${newPosition}" />
+            <div style="margin-bottom: 5px;">
+                <strong>Track ${newPosition}</strong>
+            </div>
+            <div style="margin-bottom: 5px;">
+                <label>Title:</label>
+                <input name="Tracks[${trackCount}].Title" style="width:100%; padding:5px;" />
+            </div>
+            <div>
+                <label>Length (h:mm:ss):</label>
+                <input name="Tracks[${trackCount}].Length" placeholder="0:03:25" style="width:100%; padding:5px;" />
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', trackHtml);
+}
+</script>
+
+

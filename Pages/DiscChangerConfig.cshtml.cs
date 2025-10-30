@@ -107,18 +107,21 @@ namespace DiscChanger.Pages
             string nh = null;
             int? np = null;
             bool valid = !String.IsNullOrEmpty(Type) && !String.IsNullOrEmpty(Name) && !String.IsNullOrEmpty(Connection);
-            switch (Connection)
+            if (!String.IsNullOrEmpty(Connection))
             {
-                case DiscChanger.Models.DiscChanger.CONNECTION_SERIAL_PORT:
-                    if (HardwareFlowControl != null)
-                        hfc = Boolean.Parse(HardwareFlowControl);
-                    pn = PortName;
-                    valid = valid && !String.IsNullOrEmpty(pn);
-                    break;
-                case DiscChanger.Models.DiscChanger.CONNECTION_NETWORK:
-                    nh = NetworkHost?.Trim(); np = NetworkPort;
-                    valid = valid && !String.IsNullOrEmpty(nh) && np > 1;
-                    break;
+                switch (Connection)
+                {
+                    case DiscChanger.Models.DiscChanger.CONNECTION_SERIAL_PORT:
+                        if (HardwareFlowControl != null)
+                            hfc = Boolean.Parse(HardwareFlowControl);
+                        pn = PortName;
+                        valid = valid && !String.IsNullOrEmpty(pn);
+                        break;
+                    case DiscChanger.Models.DiscChanger.CONNECTION_NETWORK:
+                        nh = NetworkHost?.Trim(); np = NetworkPort;
+                        valid = valid && !String.IsNullOrEmpty(nh) && np > 1;
+                        break;
+                }
             }
             switch (op)
             {
@@ -136,7 +139,9 @@ namespace DiscChanger.Pages
                     return RedirectToPage("Index");
                 case "Test":
                     if (valid)
+                    {
                         this.TestResult = await discChangerService.Test(Key, Type, Connection, CommandMode, pn, hfc, nh, np);
+                    }
                     break;
             }
             updateModel(Key);
