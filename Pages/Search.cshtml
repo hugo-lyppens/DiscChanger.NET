@@ -1,0 +1,127 @@
+@page
+@model SearchModel
+@{
+    ViewData["Title"] = "Search - DiscChanger.NET";
+}
+
+<nav class="navbar navbar-expand-md sticky-top navbar-light bg-secondary">
+    <a href="/" class="navbar-brand ms-2"><i class="fas fa-compact-disc fa-lg"></i></a>
+    <div class="container-fluid">
+        <form method="get" class="d-flex flex-grow-1 me-3" role="search">
+            <input class="form-control me-2"
+                   type="search"
+                   name="q"
+                   value="@Model.Query"
+                   placeholder="Search by artist, album title, track, or slot number..."
+                   autofocus
+                   autocomplete="off" />
+            <button class="btn btn-primary" type="submit">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </form>
+        <a href="/" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-th"></i> Back to Discs
+        </a>
+    </div>
+</nav>
+
+<div class="container-fluid mt-3">
+
+    @if (!string.IsNullOrEmpty(Model.Query))
+    {
+        <div class="mb-3">
+            @if (Model.Results.Count == 0)
+            {
+                <p class="text-muted">No results found for <strong>@Model.Query</strong></p>
+            }
+            else
+            {
+                <p class="text-muted">
+                    Found <strong>@Model.Results.Count</strong> result@(Model.Results.Count != 1 ? "s" : "") for <strong>@Model.Query</strong>
+                </p>
+            }
+        </div>
+
+        @if (Model.Results.Count > 0)
+        {
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3">
+                @foreach (var result in Model.Results)
+                {
+                    <div class="col">
+                        <div class="card h-100 shadow-sm">
+                            @* Clicking the art/header navigates to main page and scrolls to this disc *@
+                            <a href="/?highlight=@result.Slot&key=@result.ChangerKey"
+                               class="text-decoration-none text-reset">
+                                @if (!string.IsNullOrEmpty(result.ArtUrl))
+                                {
+                                    <img src="@result.ArtUrl"
+                                         class="card-img-top"
+                                         alt="Cover art for @result.Title"
+                                         style="object-fit:cover;height:180px;cursor:pointer;"
+                                         onerror="this.style.display='none'" />
+                                }
+                                else
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-secondary text-white"
+                                         style="height:180px;cursor:pointer;">
+                                        <i class="fas fa-compact-disc fa-4x opacity-50"></i>
+                                    </div>
+                                }
+                                <div class="card-body py-2 px-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <span class="badge bg-secondary">Slot @result.Slot</span>
+                                        <span class="badge @(result.MatchType == "Track" ? "bg-info text-dark" : result.MatchType == "Slot" ? "bg-warning text-dark" : "bg-success")">
+                                            @result.MatchType
+                                        </span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(result.Artist))
+                                    {
+                                        <div class="fw-bold text-truncate" title="@result.Artist">@result.Artist</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(result.Title))
+                                    {
+                                        <div class="text-muted small text-truncate" title="@result.Title">@result.Title</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(result.MatchedTrack))
+                                    {
+                                        <div class="mt-1 small text-info">
+                                            <i class="fas fa-music"></i> @result.MatchedTrack
+                                        </div>
+                                    }
+                                    @if (discChangerService.DiscChangers.Count > 1)
+                                    {
+                                        <div class="text-muted small mt-1">
+                                            <i class="fas fa-hdd"></i> @result.ChangerName
+                                        </div>
+                                    }
+                                </div>
+                            </a>
+                            @* Play button sends play command via main page *@
+                            <div class="card-footer p-1 d-flex gap-1">
+                                <a href="/?highlight=@result.Slot&key=@result.ChangerKey"
+                                   class="btn btn-sm btn-outline-secondary flex-fill"
+                                   title="Go to disc on main page">
+                                    <i class="fas fa-th"></i> View
+                                </a>
+                                <a href="/?play=@result.Slot&key=@result.ChangerKey"
+                                   class="btn btn-sm btn-danger flex-fill"
+                                   title="Play this disc now">
+                                    <i class="fas fa-play"></i> Play
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center text-muted mt-5">
+            <i class="fas fa-search fa-3x mb-3 d-block opacity-50"></i>
+            <p>Enter an artist name, album title, track title, or slot number above to search your disc library.</p>
+        </div>
+    }
+</div>
+
+@inject DiscChangerService discChangerService

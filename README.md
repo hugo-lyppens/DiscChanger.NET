@@ -1,4 +1,24 @@
 # DiscChanger.NET
+
+EDIT IN THIS BRANCH:
+## Disc Search
+
+Adds a search feature so discs can be found by artist, album title, track title, or slot number without scrolling the full 400-disc grid.
+
+**What's new:**
+- New `/Search` page — single search box covering artist, album, track, and slot
+- Search icon added to the main navbar
+- Clicking a result jumps back to the main grid, centers and highlights the disc (pulsing red border, 5s), and optionally auto-plays it
+
+**Files changed:**
+- `Pages/Search.cshtml`, `Pages/Search.cshtml.cs` — new search page
+- `Pages/Index.cshtml` — navbar icon + highlight/play handling for `?highlight=` / `?play=` query params
+
+No changes to controllers, the SignalR hub, or existing JS files.
+
+Full usage guide (including how to verify the changer connection via the settings screen): [doc/Search-Feature-Guide.md](doc/Search-Feature-Guide.md)
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ASP.NET Core Solution to manage discs in disc changers
 <img src="doc/DiscChanger.NET.png" />
 

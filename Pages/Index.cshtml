@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model IndexModel
 @inject DiscChangerService dcs
 @{
@@ -19,6 +19,7 @@
         <div class="boxed">
             <div>
                 <button id="edit" class="btn btn-settings" onclick="toggle_config()"><i title="Toggle access to settings" class="fas fa-cogs fa-lg"></i></button>
+                <a href="/Search" class="btn btn-settings" title="Search discs by artist, title, or track"><i class="fas fa-search fa-lg"></i></a>
             </div><div>
                 <input type="range" title="Disc Display Size (@(discDisplaySize)rem)" min="10" max="50" id="disc_display_size" onchange="change_display_size(this)" class="disc-display-size-slider" value="@discDisplaySize" />
             </div>
@@ -186,4 +187,80 @@
             $(this).parents(".popover").hide();
         });
     </script>
+    @{
+        var highlightSlot = Request.Query["highlight"].ToString();
+        var playSlot      = Request.Query["play"].ToString();
+        var actionKey     = Request.Query["key"].ToString();
+        var doPlay        = !string.IsNullOrEmpty(playSlot) && !string.IsNullOrEmpty(actionKey);
+        var doHighlight   = !string.IsNullOrEmpty(highlightSlot) && !string.IsNullOrEmpty(actionKey);
+        var targetSlot    = doPlay ? playSlot : (doHighlight ? highlightSlot : "");
+    }
+    @if (doPlay || doHighlight)
+    {
+        <style>
+        @@keyframes discPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(220,53,69,1), inset 0 0 0 4px rgba(220,53,69,0.9); background-color: rgba(220,53,69,0.55); }
+            50%  { box-shadow: 0 0 0 18px rgba(220,53,69,0), inset 0 0 0 4px rgba(220,53,69,0.6); background-color: rgba(220,53,69,0.8); }
+            100% { box-shadow: 0 0 0 0 rgba(220,53,69,0), inset 0 0 0 4px rgba(220,53,69,0.9); background-color: rgba(220,53,69,0.55); }
+        }
+        .disc-highlight {
+            animation: discPulse 1s ease-in-out 5;
+            background-color: rgba(220,53,69,0.55) !important;
+            border: 3px solid rgba(220,53,69,1);
+            border-radius: 4px;
+        }
+        </style>
+        <script>
+        $(document).ready(function () {
+            var key  = '@actionKey';
+            var slot = '@targetSlot';
+            var doPlay = @(doPlay ? "true" : "false");
+
+            // Set slot input field
+            var inp = document.getElementById('disc_number_' + key);
+            if (inp) {
+                inp.value = slot;
+                var ta = document.getElementById('title_album_number_' + key);
+                var ct = document.getElementById('chapter_track_number_' + key);
+                if (ta) ta.value = '';
+                if (ct) ct.value = '';
+            }
+
+            // Find the disc element
+            var disc = document.querySelector('[data-changer="' + key + '"][data-slot="' + slot + '"]');
+
+            if (disc) {
+                // Scroll so disc is centered on screen
+                disc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Apply pulsing highlight - stays until user interacts
+                disc.classList.add('disc-highlight');
+
+                // Remove highlight on any user scroll or click
+                function removeHighlight() {
+                    disc.classList.remove('disc-highlight');
+                    window.removeEventListener('scroll', removeHighlight);
+                    window.removeEventListener('click', removeHighlight);
+                    window.removeEventListener('touchstart', removeHighlight);
+                }
+                // Give time for scroll animation before listening
+                setTimeout(function() {
+                    window.addEventListener('scroll', removeHighlight);
+                    window.addEventListener('click', removeHighlight);
+                    window.addEventListener('touchstart', removeHighlight);
+                }, 1200);
+            }
+
+            // Play: wait for SignalR connection to be ready
+            if (doPlay) {
+                connection.start().then(function() {
+                    discDirect(key);
+                }).catch(function(err) {
+                    // Connection already started - invoke directly
+                    discDirect(key);
+                });
+            }
+        });
+        </script>
+    }
 }
